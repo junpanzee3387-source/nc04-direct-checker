@@ -1,0 +1,16 @@
+{
+  "name": "直行直帰 判定ツール",
+  "short_name": "直行直帰",
+  "description": "遠征の直行直帰を判定するツール",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0F1C2E",
+  "theme_color": "#0F1C2E",
+  "lang": "ja",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

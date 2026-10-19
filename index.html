@@ -1,0 +1,3184 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="day">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3f5f9">
+<title>直行直帰 判定ツール</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="直行直帰">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root, :root[data-theme="day"]{
+    --bg-grad-a:#ffffff;
+    --bg-grad-b:#eef1f7;
+    --bg:#f3f5f9;
+    --bg-panel:#ffffff;
+    --bg-card:#ffffff;
+    --line:#e1e6ef;
+    --text:#1c2b3f;
+    --text-dim:#5b6b82;
+    --text-faint:#9aa7b8;
+    --accent:#d9822b;
+    --accent-2:#c06f1f;
+    --accent-dim:#f3dcb6;
+    --accent-soft:rgba(217,130,43,.13);
+    --on-accent:#2a1a06;
+    --go:#2f9e5c;
+    --go-bg:rgba(47,158,92,.12);
+    --stop:#d1483f;
+    --stop-bg:rgba(209,72,63,.10);
+    --header-bg:rgba(255,255,255,.90);
+    --tabbar-bg:rgba(255,255,255,.94);
+    --card-shadow:0 1px 3px rgba(30,45,70,.06), 0 1px 2px rgba(30,45,70,.04);
+    --overlay:rgba(20,26,36,.45);
+    --radius:14px;
+    --safe-b: env(safe-area-inset-bottom, 0px);
+  }
+  :root[data-theme="night"]{
+    --bg-grad-a:#1a2f4a;
+    --bg-grad-b:#0f1c2e;
+    --bg:#0f1c2e;
+    --bg-panel:#15263d;
+    --bg-card:#1b2e48;
+    --line:#2a3f5c;
+    --text:#eef3f8;
+    --text-dim:#93a7c2;
+    --text-faint:#5f7391;
+    --accent:#e3a83b;
+    --accent-2:#c98f27;
+    --accent-dim:#8a6a2a;
+    --accent-soft:rgba(227,168,59,.16);
+    --on-accent:#22180a;
+    --go:#4fbf7a;
+    --go-bg:rgba(79,191,122,.14);
+    --stop:#e2645a;
+    --stop-bg:rgba(226,100,90,.14);
+    --header-bg:rgba(15,28,46,.92);
+    --tabbar-bg:rgba(21,38,61,.96);
+    --card-shadow:none;
+    --overlay:rgba(0,0,0,.55);
+    --radius:14px;
+    --safe-b: env(safe-area-inset-bottom, 0px);
+  }
+  /* ライト／ダーク切り替えスイッチ（ヘッダー右上） */
+  .mode-switch{
+    position:absolute; right:14px; top:12px;
+    width:58px; height:30px; padding:0; border-radius:20px;
+    background:var(--bg-panel); border:1px solid var(--line);
+    cursor:pointer; -webkit-tap-highlight-color:transparent;
+  }
+  .mode-switch .knob{
+    position:absolute; top:2px; left:2px; width:24px; height:24px; border-radius:50%;
+    background:var(--accent); color:var(--on-accent);
+    display:flex; align-items:center; justify-content:center;
+    transition:transform .2s ease;
+  }
+  .mode-switch .knob svg{ width:15px; height:15px; }
+  .mode-switch .i-moon{ display:none; }
+  .mode-switch[aria-checked="true"] .knob{ transform:translateX(28px); }
+  .mode-switch[aria-checked="true"] .i-sun{ display:none; }
+  .mode-switch[aria-checked="true"] .i-moon{ display:block; }
+  .mode-switch::before, .mode-switch::after{
+    content:""; position:absolute; top:50%; width:6px; height:6px; margin-top:-3px; border-radius:50%;
+    background:var(--text-faint); opacity:.5;
+  }
+  .mode-switch::before{ left:10px; }
+  .mode-switch::after{ right:10px; }
+  .mode-switch .knob{ z-index:1; }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 50% -10%, var(--bg-grad-a) 0%, var(--bg-grad-b) 55%, var(--bg) 100%);
+    background-color:var(--bg);
+    color:var(--text);
+    font-family:"Zen Kaku Gothic New", -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+    min-height:100vh;
+    padding-bottom:calc(76px + var(--safe-b));
+    -webkit-font-smoothing:antialiased;
+    transition:background-color .2s, color .2s;
+  }
+  .num{ font-family:"JetBrains Mono", ui-monospace, monospace; }
+
+  header.top{
+    position:sticky; top:0; z-index:20;
+    background:var(--header-bg);
+    backdrop-filter: blur(8px);
+    border-bottom:1px solid var(--line);
+    padding:14px 18px 12px;
+  }
+  header.top .brand{
+    display:flex; align-items:center; gap:10px;
+  }
+  header.top .diamond{
+    width:26px; height:26px; position:relative; flex:0 0 auto;
+  }
+  header.top .diamond svg{ width:100%; height:100%; }
+  header.top h1{
+    font-size:17px; margin:0; font-weight:900; letter-spacing:.02em;
+  }
+  header.top .sub{
+    font-size:11.5px; color:var(--text-dim); margin-top:2px; letter-spacing:.03em;
+  }
+
+  main{ max-width:640px; margin:0 auto; padding:16px 14px 8px; }
+  section.view{ display:none; animation:fade .25s ease; }
+  section.view.active{ display:block; }
+  @keyframes fade{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
+
+  .card{
+    background:var(--bg-card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:var(--card-shadow);
+    padding:16px 16px 18px;
+    margin-bottom:14px;
+  }
+  .card h2{
+    font-size:13px; margin:0 0 12px; color:var(--accent);
+    letter-spacing:.08em; font-weight:700; text-transform:uppercase;
+    display:flex; align-items:center; gap:8px;
+  }
+  .card h2 .tag{
+    font-size:10px; background:var(--accent-dim); color:var(--on-accent);
+    padding:2px 7px; border-radius:20px; letter-spacing:.02em; text-transform:none;
+  }
+  .card p.hint{ font-size:12.5px; color:var(--text-dim); line-height:1.7; margin:0 0 12px; }
+
+  /* 場所・参加者：スマホ1画面に収めるためのコンパクト表示 */
+  .export-row{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:12px; }
+  .export-row .btn{ padding:11px 8px; font-size:12.5px; gap:6px; }
+  .pm-card{ padding:14px; margin-bottom:10px; }
+  .pm-card h2{ margin:0 0 8px; }
+  .pm-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
+  .pm-head h2{ margin:0; }
+  .pm-head .maplink{ margin:0; padding:2px 0; }
+  .exp-fields{ margin-top:8px; }
+  .exp-fields .row2{ margin-top:8px; }
+  .exp-fields input.num{ font-size:14px; }
+  .save-hist{
+    display:flex; align-items:center; gap:7px; margin-top:9px;
+    font-size:12px; color:var(--text-dim); cursor:pointer;
+  }
+  .save-hist input{ width:16px; height:16px; margin:0; }
+  .member-toggle{
+    width:100%; display:flex; align-items:center; gap:8px;
+    background:none; border:none; padding:0; margin:0;
+    font-family:inherit; color:inherit; text-align:left; cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .member-toggle .mt-title{ font-size:13px; font-weight:700; color:var(--accent); letter-spacing:.08em; }
+  .member-toggle .mt-count{
+    font-size:12.5px; font-weight:700; color:var(--text);
+    background:var(--accent-soft); border-radius:20px; padding:3px 10px; white-space:nowrap;
+  }
+  .member-toggle .mt-count b{ color:var(--accent); font-size:14px; }
+  .member-toggle .mt-action{
+    margin-left:auto; display:inline-flex; align-items:center; gap:7px;
+    font-size:12px; font-weight:700; color:var(--accent); white-space:nowrap;
+    border:1px solid var(--accent-dim); background:var(--accent-soft);
+    border-radius:20px; padding:6px 11px 6px 13px;
+  }
+  .member-toggle .mt-action::after{
+    content:""; width:6px; height:6px; margin-bottom:3px;
+    border-right:2px solid currentColor; border-bottom:2px solid currentColor;
+    transform:rotate(45deg); transition:transform .2s;
+  }
+  .member-toggle[aria-expanded="true"] .mt-action::after{ transform:rotate(-135deg); margin-bottom:-2px; }
+  #member-panel{ margin-top:12px; }
+  #member-list-simple{
+    max-height:38vh; overflow-y:auto; -webkit-overflow-scrolling:touch;
+    overscroll-behavior-y:contain;   /* 端まで来ても画面全体にスクロールを引き継がない */
+    touch-action:pan-y;              /* 縦スクロールはこの枠で処理する */
+    transform:translateZ(0);         /* 独立したスクロール層にして、最初のタップ直後の誤動作を防ぐ */
+  }
+  #member-list-simple .member-card{ padding:8px 10px; margin-bottom:6px; }
+  #member-panel details.howto{ margin:12px 0 0; }
+
+  /* 設定：折りたたみカード */
+  details.fold{ padding:0; }
+  details.fold > summary{
+    list-style:none; cursor:pointer; display:flex; align-items:center; justify-content:space-between;
+    gap:10px; padding:15px 16px; -webkit-tap-highlight-color:transparent;
+  }
+  details.fold > summary::-webkit-details-marker{ display:none; }
+  details.fold > summary h2{ margin:0; }
+  details.fold > summary::after{
+    content:""; width:8px; height:8px; flex:0 0 auto; margin:0 3px 4px 0;
+    border-right:2px solid var(--text-faint); border-bottom:2px solid var(--text-faint);
+    transform:rotate(45deg); transition:transform .2s;
+  }
+  details.fold[open] > summary::after{ transform:rotate(-135deg); margin:4px 3px 0 0; }
+  details.fold > .fold-body{ padding:0 16px 18px; }
+
+  .field{ margin-bottom:12px; }
+  .field:last-child{ margin-bottom:0; }
+  .field label{
+    display:block; font-size:12px; color:var(--text-dim); margin-bottom:5px; font-weight:500;
+  }
+  .field label .req{ color:var(--stop); margin-left:2px; }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .row3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  input[type=text], input[type=number], input[type=date], input[type=password], input[type=datetime-local]{
+    width:100%; background:var(--bg-panel); border:1px solid var(--line);
+    color:var(--text); border-radius:9px; padding:10px 11px; font-size:14.5px;
+    font-family:inherit; -webkit-appearance:none;
+  }
+  :root[data-theme="day"] input[type=text], :root[data-theme="day"] input[type=number], :root[data-theme="day"] input[type=date]{
+    background:#f6f7fb;
+  }
+  input.num{ font-family:"JetBrains Mono", monospace; font-size:13.5px; }
+  select:disabled{ opacity:.45; }
+  .metric .val.off{ color:var(--text-faint); }
+  select.num{ font-family:"JetBrains Mono", "Zen Kaku Gothic New", monospace; font-size:13.5px; }
+  input:focus{ outline:none; border-color:var(--accent); }
+  input::placeholder{ color:var(--text-faint); }
+
+  .maplink{
+    display:inline-flex; align-items:center; gap:5px; font-size:12px;
+    color:var(--accent); text-decoration:none; margin-top:8px; padding:6px 0;
+  }
+  .maplink svg{ width:13px; height:13px; }
+
+  /* 日付入力：他の入力枠と高さ・余白・文字位置をそろえる（iOS/Androidの既定表示を打ち消す） */
+  input[type=date]{
+    appearance:none; display:block; min-width:0; min-height:42px; line-height:1.3;
+    text-align:left; box-sizing:border-box;
+  }
+  input[type=date]::-webkit-date-and-time-value{ text-align:left; min-height:1.3em; }
+  input[type=date]::-webkit-calendar-picker-indicator{ opacity:.6; }
+  :root[data-theme="night"] input[type=date]{ color-scheme:dark; }
+  select{
+    width:100%; background:var(--bg-panel); border:1px solid var(--line);
+    color:var(--text); border-radius:9px; padding:10px 11px; font-size:13.5px;
+    font-family:inherit; -webkit-appearance:none; appearance:none;
+  }
+  :root[data-theme="day"] select{ background:#f6f7fb; }
+  select:focus{ outline:none; border-color:var(--accent); }
+
+  .hist-row{ display:flex; gap:8px; align-items:center; }
+  .hist-row select{ flex:1; }
+  .hist-save-btn{ margin-top:10px; width:100%; }
+
+  .hist-modal-card{ max-height:82vh; display:flex; flex-direction:column; }
+  .hist-list{
+    overflow-y:auto; margin:2px 0 14px; border:1px solid var(--line); border-radius:10px;
+    flex:1 1 auto; min-height:0;
+  }
+  .hist-item{
+    display:flex; align-items:center; gap:8px; padding:9px 10px 9px 12px;
+    border-bottom:1px solid var(--line);
+  }
+  .hist-main{ display:flex; align-items:flex-start; gap:10px; flex:1; min-width:0; cursor:pointer; }
+  .hist-edit-btn{
+    flex:0 0 auto; font-family:inherit; font-size:12px; font-weight:700; color:var(--accent);
+    background:var(--accent-soft); border:1px solid var(--accent-dim); border-radius:20px;
+    padding:6px 13px; cursor:pointer;
+  }
+  .hist-view{ display:flex; flex-direction:column; min-height:0; flex:1 1 auto; }
+  #history-edit-view{ overflow-y:auto; }
+  .edit-err{ min-height:18px; margin-top:8px; font-size:12px; color:var(--stop); }
+  .hist-item:last-child{ border-bottom:none; }
+  .hist-main input[type=checkbox]{ margin-top:3px; width:16px; height:16px; flex:0 0 auto; }
+  .hist-item .hist-info{ flex:1; min-width:0; }
+  .hist-item .hist-label{ font-size:13.5px; font-weight:700; }
+  .hist-item .hist-coord{ font-size:11.5px; color:var(--text-dim); font-family:"JetBrains Mono", monospace; margin-top:2px; }
+  .hist-empty{ padding:28px 12px; text-align:center; color:var(--text-faint); font-size:13px; }
+  .hist-modal-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+  .hist-modal-actions .btn{ flex:1; min-width:105px; }
+
+  .divider{ height:1px; background:var(--line); margin:16px 0; }
+
+  /* Tab bar */
+  nav.tabbar{
+    position:fixed; left:0; right:0; bottom:0; z-index:30;
+    background:var(--tabbar-bg); backdrop-filter:blur(10px);
+    border-top:1px solid var(--line);
+    padding:8px 6px calc(8px + var(--safe-b));
+    display:flex; justify-content:space-around;
+  }
+  nav.tabbar button{
+    background:none; border:none; color:var(--text-faint);
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    font-family:inherit; font-size:10.5px; padding:4px 10px; border-radius:10px;
+    flex:1; max-width:110px;
+  }
+  nav.tabbar button svg{ width:21px; height:21px; }
+  nav.tabbar button.active{ color:var(--accent); }
+  nav.tabbar button.active svg{ filter:drop-shadow(0 0 6px var(--accent-soft)); }
+
+  /* Members */
+  .member-card{
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:12px;
+    padding:12px; margin-bottom:10px; position:relative;
+  }
+  .member-card.off{ opacity:.55; }
+  .member-top{ display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .member-top input[type=text].name{
+    flex:1; font-size:15px; font-weight:700; background:transparent; border:none;
+    border-bottom:1px solid var(--line); border-radius:0; padding:4px 2px;
+  }
+  .member-top .name-display{
+    flex:1; font-size:15px; font-weight:700; padding:4px 2px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .switch{
+    position:relative; width:42px; height:24px; flex:0 0 auto;
+  }
+  .switch input{ opacity:0; width:100%; height:100%; position:absolute; margin:0; cursor:pointer; }
+  .switch .track{
+    position:absolute; inset:0; background:var(--line); border-radius:20px; transition:.15s;
+  }
+  .switch .thumb{
+    position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%;
+    background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.25); transition:.15s;
+  }
+  :root[data-theme="night"] .switch .thumb{ background:var(--text-dim); }
+  .switch input:checked + .track{ background:var(--go-bg); border:1px solid var(--go); }
+  .switch input:checked ~ .thumb{ transform:translateX(18px); background:var(--go); }
+
+  .del-btn{
+    background:none; border:none; color:var(--text-faint); padding:4px 6px;
+    display:flex; align-items:center;
+  }
+  .del-btn svg{ width:17px; height:17px; }
+
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    padding:12px 18px; border-radius:11px; border:none; font-family:inherit;
+    font-size:14.5px; font-weight:700; cursor:pointer; width:100%;
+  }
+  .btn.primary{ background:linear-gradient(180deg,var(--accent),var(--accent-2)); color:var(--on-accent); }
+  .btn.ghost{ background:var(--bg-panel); color:var(--text); border:1px solid var(--line); }
+  .btn.danger{ background:linear-gradient(180deg,#e2645a,#c8483e); color:#fff; }
+  .btn.small{ width:auto; padding:8px 14px; font-size:12.5px; }
+  .btn:disabled{ opacity:.5; }
+  .btn svg{ width:16px; height:16px; }
+
+  .addrow{
+    width:100%; border:1.5px dashed var(--line); background:none; color:var(--text-dim);
+    border-radius:11px; padding:12px; font-family:inherit; font-size:13.5px; margin-top:4px;
+  }
+
+  /* Result cards */
+  .status-banner{
+    display:flex; align-items:center; gap:10px; padding:11px 13px; border-radius:11px;
+    background:var(--bg-panel); border:1px solid var(--line); font-size:12.5px; color:var(--text-dim);
+    margin-bottom:14px; min-height:20px;
+  }
+  .spinner{
+    width:15px; height:15px; border-radius:50%; border:2px solid var(--line);
+    border-top-color:var(--accent); animation:spin .8s linear infinite; flex:0 0 auto;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  .result-card{
+    background:var(--bg-card); border:1px solid var(--line); border-radius:13px;
+    box-shadow:var(--card-shadow);
+    padding:14px; margin-bottom:10px;
+  }
+  .result-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .result-head .name{ font-size:15.5px; font-weight:700; }
+  .badge{
+    font-size:11.5px; font-weight:700; padding:4px 11px; border-radius:20px; letter-spacing:.03em;
+  }
+  .badge.go{ background:var(--go-bg); color:var(--go); }
+  .badge.stop{ background:var(--stop-bg); color:var(--stop); }
+  .badge.err{ background:var(--accent-soft); color:var(--text-dim); }
+
+  .metrics{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px; }
+  .metric{
+    background:var(--bg-panel); border-radius:9px; padding:8px 6px; text-align:center;
+  }
+  .metric .lbl{ font-size:10px; color:var(--text-faint); margin-bottom:3px; }
+  .metric .val{ font-size:14px; font-weight:700; }
+  .metric .val.go{ color:var(--go); }
+  .metric .val.stop{ color:var(--text-dim); }
+
+  .reason{ font-size:11.5px; color:var(--text-dim); line-height:1.6; }
+  .count-tag{
+    display:inline-block; margin-top:8px; font-size:11px; padding:3px 9px; border-radius:20px;
+  }
+  .count-tag.ok{ background:var(--go-bg); color:var(--go); }
+  .count-tag.over{ background:var(--stop-bg); color:var(--stop); }
+
+  .empty{
+    text-align:center; padding:40px 20px; color:var(--text-faint); font-size:13px; line-height:1.8;
+  }
+  .empty svg{ width:40px; height:40px; margin-bottom:10px; opacity:.5; }
+
+  details.howto{
+    margin-bottom:8px; border:1px solid var(--line); border-radius:11px;
+    background:var(--bg-panel); overflow:hidden;
+  }
+  details.howto summary{
+    cursor:pointer; font-weight:700; font-size:13.5px; color:var(--text);
+    padding:12px 14px; list-style:none; display:flex; align-items:center; justify-content:space-between; gap:10px;
+    -webkit-tap-highlight-color:transparent;
+  }
+  details.howto summary::-webkit-details-marker{ display:none; }
+  details.howto summary::after{
+    content:""; width:8px; height:8px; flex:0 0 auto; margin:0 3px 4px 0;
+    border-right:2px solid var(--accent); border-bottom:2px solid var(--accent);
+    transform:rotate(45deg); transition:transform .2s;
+  }
+  details.howto[open] > summary{ background:var(--accent-soft); border-bottom:1px solid var(--line); }
+  details.howto[open] > summary::after{ transform:rotate(-135deg); margin:4px 3px 0 0; }
+  details.howto .body{ font-size:12.5px; color:var(--text-dim); line-height:1.85; padding:12px 14px 14px; }
+  details.howto .body b{ color:var(--text); }
+  details.howto .body code{ background:var(--bg-panel); padding:1px 5px; border-radius:5px; font-size:11.5px; }
+
+  .toast{
+    position:fixed; left:50%; bottom:calc(90px + var(--safe-b)); transform:translateX(-50%);
+    background:var(--text); color:var(--bg);
+    padding:10px 18px; border-radius:30px; font-size:12.5px; z-index:90;
+    opacity:0; pointer-events:none; transition:opacity .25s, transform .25s;
+    box-shadow:0 6px 18px rgba(0,0,0,.18);
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(-4px); }
+
+  .settings-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+  .settings-actions .btn{ flex:1; min-width:130px; }
+
+  a.filelink{ display:none; }
+
+  /* 出力プレビュー（判定シート内で一覧表を確認） */
+  .pv-overlay{ position:fixed; inset:0; z-index:70; background:var(--bg); display:none; flex-direction:column; }
+  .pv-overlay.show{ display:flex; }
+  .pv-head{ display:flex; align-items:center; gap:8px; padding:10px 12px; padding-top:calc(10px + env(safe-area-inset-top, 0px)); background:var(--bg-panel); border-bottom:1px solid var(--line); }
+  .pv-title{ flex:1; font-size:14.5px; font-weight:700; min-width:0; }
+  .pv-title small{ display:block; font-size:11px; font-weight:400; color:var(--text-dim); }
+  .pv-head .btn, .pv-foot .btn{ width:auto; padding:9px 14px; font-size:13px; }
+  .pv-body{ flex:1; overflow:auto; -webkit-overflow-scrolling:touch; padding:12px; background:rgba(120,130,145,.28); }
+  .pv-body img{ display:block; margin:0 0 14px; background:#fff; box-shadow:0 1px 6px rgba(0,0,0,.28); max-width:none; }
+  .pv-msg{ padding:40px 0; text-align:center; font-size:13px; color:var(--text-dim); }
+  .pv-foot{ display:flex; gap:8px; padding:10px 12px calc(10px + var(--safe-b)); background:var(--bg-panel); border-top:1px solid var(--line); }
+  .pv-foot .btn{ flex:1; }
+  .pv-zoom{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-dim); }
+  .pv-zoom .btn{ width:38px; padding:8px 0; font-size:16px; line-height:1; }
+
+  /* Confirm modal */
+  .modal-overlay{
+    position:fixed; inset:0; background:var(--overlay); z-index:80;
+    display:flex; align-items:flex-end; justify-content:center;
+    opacity:0; pointer-events:none; transition:opacity .2s;
+  }
+  .modal-overlay.show{ opacity:1; pointer-events:auto; }
+  .modal-card{
+    background:var(--bg-card); border:1px solid var(--line); border-radius:18px 18px 0 0;
+    width:100%; max-width:640px; padding:22px 20px calc(22px + var(--safe-b));
+    transform:translateY(12px); transition:transform .2s;
+  }
+  .modal-overlay.show .modal-card{ transform:translateY(0); }
+  @media (min-width:480px){
+    .modal-overlay{ align-items:center; }
+    .modal-card{ border-radius:16px; margin-bottom:0; }
+  }
+  .modal-title{ font-size:15.5px; font-weight:700; margin-bottom:8px; }
+  .modal-msg{ font-size:13px; color:var(--text-dim); line-height:1.7; margin-bottom:18px; white-space:pre-line; }
+  .modal-actions{ display:flex; gap:10px; }
+  .modal-actions .btn{ flex:1; }
+
+  /* 登録ボタン：画面下に固定（場所・参加者画面のみ表示）。幅は小さめにして「元に戻す」と重ならないようにする */
+  .register-bar{
+    position:fixed; left:0; right:0; bottom:calc(74px + var(--safe-b)); z-index:26;
+    max-width:640px; margin:0 auto; padding:0 14px;
+    display:none; justify-content:flex-start; pointer-events:none;
+  }
+  .register-bar .btn{
+    width:auto; min-width:140px; padding:10px 26px; pointer-events:auto;
+    box-shadow:0 6px 18px rgba(20,30,50,.22);
+  }
+  #view-place-members{ padding-bottom:64px; }
+
+  /* Undo FAB */
+  .undo-fab{
+    position:fixed; right:14px; bottom:calc(74px + var(--safe-b)); z-index:25;
+    display:none; align-items:center; gap:7px;
+    background:var(--bg-card); color:var(--text); border:1px solid var(--line);
+    border-radius:30px; padding:10px 16px 10px 12px; font-family:inherit; font-size:12.5px; font-weight:700;
+    box-shadow:0 6px 18px rgba(20,30,50,.18); cursor:pointer;
+  }
+  .undo-fab svg{ width:16px; height:16px; color:var(--accent); }
+
+  /* Deleted history */
+  .history-item{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:9px 0; border-bottom:1px solid var(--line);
+  }
+  .history-item:last-child{ border-bottom:none; }
+  .history-item .hi-name{ font-weight:700; font-size:13.5px; color:var(--text); }
+  .history-item .hi-date{ font-size:11px; color:var(--text-faint); margin-top:1px; }
+  .history-item .hi-actions{ display:flex; gap:8px; align-items:center; flex:0 0 auto; }
+  .link-btn{
+    background:none; border:none; font-family:inherit; font-size:11.5px; padding:4px 2px;
+    color:var(--text-faint); text-decoration:underline;
+  }
+  .restore-btn{
+    background:var(--go-bg); color:var(--go); border:none; border-radius:20px;
+    font-family:inherit; font-size:11.5px; font-weight:700; padding:6px 12px;
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <div class="diamond">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M12 2 22 12 12 22 2 12Z" stroke="var(--accent)" stroke-width="1.6" stroke-linejoin="round"/>
+        <circle cx="12" cy="12" r="2.3" fill="var(--accent)"/>
+      </svg>
+    </div>
+    <div>
+      <h1>直行直帰 判定ツール</h1>
+      <div class="sub">GATHER OR GO DIRECT — 遠征移動 判定アプリ</div>
+    </div>
+  </div>
+  <button type="button" class="mode-switch" id="theme-toggle" role="switch" aria-checked="false" aria-label="ダークモード">
+    <span class="knob">
+      <svg class="i-sun" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <svg class="i-moon" viewBox="0 0 24 24" fill="none"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+    </span>
+  </button>
+</header>
+
+<main>
+
+  <!-- ============ 場所・参加者 ============ -->
+  <section class="view" id="view-place-members">
+    <div class="card pm-card">
+      <h2>試合情報</h2>
+      <div class="exp-fields">
+        <div class="row2">
+          <input type="date" id="pm-matchDate" aria-label="日付">
+          <input type="text" id="pm-opponent" placeholder="対戦相手（例：〇〇ボーイズ）" aria-label="対戦相手">
+        </div>
+      </div>
+    </div>
+
+    <div class="card pm-card">
+      <h2>集合場所</h2>
+      <select id="pm-meetHistSel"><option value="">-- 一覧・履歴からの選択 --</option></select>
+    </div>
+
+    <div class="card pm-card">
+      <div class="pm-head">
+        <h2>遠征先</h2>
+        <a class="maplink" id="pm-expMapLink" href="#" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21Z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="9.5" r="2.3" stroke="currentColor" stroke-width="1.6"/></svg>
+          地図で調べる
+        </a>
+      </div>
+      <select id="pm-expHistSel"><option value="">-- 一覧・履歴からの選択 --</option></select>
+      <div class="exp-fields">
+        <input type="text" id="pm-expAddr" placeholder="遠征先の名前（例：〇〇球場）">
+        <div class="row2">
+          <input type="number" step="any" inputmode="decimal" class="num" id="pm-expLat" placeholder="緯度 35.1234">
+          <input type="number" step="any" inputmode="decimal" class="num" id="pm-expLng" placeholder="経度 137.1234">
+        </div>
+        <label class="save-hist"><input type="checkbox" id="pm-expSave">登録時に履歴にも保存する</label>
+      </div>
+    </div>
+
+    <div class="card pm-card">
+      <h2>直行直帰 台数上限（空欄＝無制限）</h2>
+      <input type="number" step="1" min="0" inputmode="numeric" class="num" id="pm-maxCount" placeholder="例）2" aria-label="直行直帰 台数上限">
+      <p class="hint" style="margin:8px 0 0;">上限を超える場合、短縮距離が大きい人を優先して「対象内」、以降は「台数オーバー」と表示します。</p>
+    </div>
+
+    <div class="card pm-card">
+      <button type="button" class="member-toggle" id="btn-member-toggle" aria-expanded="false" aria-controls="member-panel">
+        <span class="mt-title">参加者</span>
+        <span class="mt-count" id="member-count">参加 0 / 0人</span>
+        <span class="mt-action"><span id="member-toggle-label">一覧から選択</span></span>
+      </button>
+      <div id="member-panel" hidden>
+        <div id="member-list-simple"></div>
+        <details class="howto" id="history-block">
+          <summary>削除履歴（<span id="history-count">0</span>）</summary>
+          <div class="body" id="history-list"></div>
+        </details>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ============ 判定 ============ -->
+  <section class="view" id="view-results">
+    <button class="btn primary" id="btn-run" style="margin-bottom:12px;">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v6m0 0-6 6a9 9 0 1 0 12 0l-6-6Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      判定を実行する
+    </button>
+    <button class="btn ghost" id="btn-back" type="button" style="margin-bottom:12px;">
+      <svg viewBox="0 0 24 24" fill="none"><path d="m15 6-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      戻る
+    </button>
+    <div class="status-banner" id="status-banner" style="display:none;"></div>
+    <div id="result-summary"></div>
+    <div class="export-row" id="export-row" style="display:none;">
+      <button type="button" class="btn ghost" id="btn-preview">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/></svg>
+        プレビュー
+      </button>
+      <button type="button" class="btn ghost" id="btn-save">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        保存
+      </button>
+      <button type="button" class="btn ghost" id="btn-share">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 15V4m0 0L8 8m4-4 4 4M5 12v6.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        共有
+      </button>
+    </div>
+    <div id="result-list"></div>
+  </section>
+
+  <!-- ============ 設定 ============ -->
+  <section class="view" id="view-settings">
+    <details class="card fold">
+      <summary><h2>判定の基準値</h2></summary>
+      <div class="fold-body">
+      <p class="hint">判定に使う項目を選び、それぞれの基準を選びます。集合経由と直行の差が基準以上なら、その項目は「直行」と判定します。</p>
+      <div style="margin-bottom:12px;">
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:6px;font-weight:500;">判定に使う項目</div>
+        <div style="display:flex;gap:18px;flex-wrap:wrap;">
+          <label class="save-hist" style="margin-top:0;font-size:13.5px;color:var(--text);"><input type="checkbox" id="s-useDist"> 距離</label>
+          <label class="save-hist" style="margin-top:0;font-size:13.5px;color:var(--text);"><input type="checkbox" id="s-useTime"> 時間</label>
+          <label class="save-hist" style="margin-top:0;font-size:13.5px;color:var(--text);"><input type="checkbox" id="s-useAngle"> 角度</label>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>距離差基準（km）</label>
+          <select class="num" id="s-distTh"></select>
+        </div>
+        <div class="field">
+          <label>時間差基準（分）</label>
+          <select class="num" id="s-timeTh"></select>
+        </div>
+      </div>
+      <div class="field">
+        <label>角度基準（°）</label>
+        <select class="num" id="s-angleTh"></select>
+      </div>
+      <div class="divider"></div>
+      <div class="field">
+        <label>直行と判定する条件数（使う項目のうち）</label>
+        <select id="s-needCount"></select>
+      </div>
+      <p class="hint" style="margin:6px 0 0;">使う項目のうち、ここで選んだ数が「直行」に該当したら総合判定を「直行」にします。</p>
+      <div class="divider"></div>
+      <p class="hint">近距離でも方角がほぼ正反対なら直行寄りに判定したい場合の倍率基準です（絶対差だけでは拾えないケース用）。「使用しない」を選ぶと倍率では判定しません。</p>
+      <div class="row2">
+        <div class="field">
+          <label>距離倍率基準（倍）</label>
+          <select class="num" id="s-distRatio"></select>
+        </div>
+        <div class="field">
+          <label>時間倍率基準（倍）</label>
+          <select class="num" id="s-timeRatio"></select>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <p class="hint">OSRMの所要時間は、渋滞や信号を含まず短めに出ることがあります。Googleマップなどと比べて、合う倍率を選んでください（取得した時間にこの倍率を掛けて判定します）。取得元をGoogleにしたときは渋滞を含むため、この倍率は使いません。</p>
+      <div class="field">
+        <label>時間の補正倍率（倍）</label>
+        <select class="num" id="s-timeFactor"></select>
+      </div>
+      <p class="hint" style="margin:10px 0 0;">直行直帰の台数上限は「場所・参加者」タブで設定します。</p>
+      </div>
+    </details>
+
+    <details class="card fold" id="settings-route">
+      <summary><h2>距離・時間の取得元</h2></summary>
+      <div class="fold-body">
+      <p class="hint">距離・時間をどの地図サービスで取得するかを選びます。初期設定はOSRM（無料・登録不要）です。Googleを選ぶと、渋滞予測を含む時間と、Googleマップに近い距離になります（Google Cloudの登録とAPIキーが必要です）。</p>
+      <div class="field">
+        <label>取得元</label>
+        <select id="s-provider">
+          <option value="osrm">OSRM（無料・登録不要）</option>
+          <option value="google">Google（Routes API・渋滞を考慮）</option>
+        </select>
+      </div>
+      <div id="google-box">
+        <div class="field">
+          <label>Google APIキー</label>
+          <input type="password" id="s-gkey" placeholder="AIza..." autocomplete="off" autocapitalize="off" spellcheck="false">
+        </div>
+        <p class="hint">キーはこの端末のブラウザ内にだけ保存します。バックアップや判定結果の画像・PDFには含まれません。</p>
+        <div class="field">
+          <label>出発日時（空欄なら現在時刻）</label>
+          <input type="datetime-local" id="s-depart">
+        </div>
+        <p class="hint">渋滞の予測に使う出発日時です（例：遠征当日の朝）。過去の日時は無視して、現在時刻で計算します。</p>
+        <div style="margin-bottom:6px;font-size:12px;color:var(--text-dim);font-weight:500;">経路の条件（Googleのときのみ）</div>
+        <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:12px;">
+          <label class="save-hist" style="margin-top:0;font-size:13.5px;color:var(--text);"><input type="checkbox" id="s-avoidHighways"> 高速道路を避ける</label>
+          <label class="save-hist" style="margin-top:0;font-size:13.5px;color:var(--text);"><input type="checkbox" id="s-avoidTolls"> 有料道路を避ける</label>
+        </div>
+        <button class="btn ghost small" id="btn-gtest" type="button">接続テスト（1件消費）</button>
+        <p class="hint" id="g-test-result" style="margin:8px 0 0;"></p>
+        <p class="hint" id="g-usage" style="margin:8px 0 0;"></p>
+        <p class="hint" style="margin:8px 0 0;">渋滞を考慮する設定のため、Google側ではPro区分（月5,000件まで無料）で計算されます。1回の判定で「1＋参加人数×2」件を使います。取得回数は、この端末で行った分の目安です。</p>
+      </div>
+      </div>
+    </details>
+
+    <details class="card fold" id="settings-meet-add">
+      <summary><h2>集合場所の追加</h2></summary>
+      <div class="fold-body">
+      <p class="hint">新しい集合場所を登録します。登録すると「場所・参加者」タブの履歴から選べるようになります。</p>
+      <div class="field">
+        <label>住所・呼び名</label>
+        <input type="text" id="add-meetAddr" placeholder="例）〇〇駐車場">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>緯度<span class="req">*</span></label>
+          <input type="number" step="any" class="num" id="add-meetLat" placeholder="35.2557">
+        </div>
+        <div class="field">
+          <label>経度<span class="req">*</span></label>
+          <input type="number" step="any" class="num" id="add-meetLng" placeholder="137.0294">
+        </div>
+      </div>
+      <a class="maplink" id="add-meetMapLink" href="#" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21Z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="9.5" r="2.3" stroke="currentColor" stroke-width="1.6"/></svg>
+        Google マップで住所から緯度経度を調べる
+      </a>
+      <button type="button" class="btn primary" id="btn-meetAdd" style="margin-top:12px;">集合場所を追加</button>
+      <button type="button" class="btn ghost small" id="btn-meetHistManage" style="margin-top:10px;">登録済みの履歴を管理する</button>
+      </div>
+    </details>
+
+    <details class="card fold" id="settings-exp-add">
+      <summary><h2>遠征先の追加</h2></summary>
+      <div class="fold-body">
+      <p class="hint">新しい遠征先を登録します。登録すると「場所・参加者」タブの履歴から選べるようになります。</p>
+      <div class="field">
+        <label>住所・呼び名</label>
+        <input type="text" id="add-expAddr" placeholder="例）〇〇球場">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>緯度<span class="req">*</span></label>
+          <input type="number" step="any" class="num" id="add-expLat" placeholder="34.7912">
+        </div>
+        <div class="field">
+          <label>経度<span class="req">*</span></label>
+          <input type="number" step="any" class="num" id="add-expLng" placeholder="137.0190">
+        </div>
+      </div>
+      <a class="maplink" id="add-expMapLink" href="#" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21Z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="9.5" r="2.3" stroke="currentColor" stroke-width="1.6"/></svg>
+        Google マップで住所から緯度経度を調べる
+      </a>
+      <button type="button" class="btn primary" id="btn-expAdd" style="margin-top:12px;">遠征先を追加</button>
+      <button type="button" class="btn ghost small" id="btn-expHistManage" style="margin-top:10px;">登録済みの履歴を管理する</button>
+      </div>
+    </details>
+
+    <details class="card fold" id="settings-member-add">
+      <summary><h2>参加者の追加</h2></summary>
+      <div class="fold-body">
+      <p class="hint">新しい参加者を登録します。判定には自宅の緯度・経度が必要です。</p>
+      <div id="member-draft-list"></div>
+      <button type="button" class="btn primary" id="btn-member-draft-submit" style="margin-top:12px;">参加者を登録する</button>
+      </div>
+    </details>
+
+    <details class="card fold">
+      <summary><h2>データの管理</h2></summary>
+      <div class="fold-body">
+      <div class="settings-actions">
+        <button class="btn ghost" id="btn-export"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>バックアップ書き出し</button>
+        <button class="btn ghost" id="btn-import"><svg viewBox="0 0 24 24" fill="none"><path d="M12 15V3m0 12-4-4m4 4 4-4M5 21h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>読み込み</button>
+      </div>
+      <input type="file" id="file-import" accept=".xlsx,.json,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none;">
+      <div class="divider"></div>
+      <button class="btn ghost" id="btn-reset" style="color:var(--stop);">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        初期設定に戻す
+      </button>
+      <p class="hint" style="margin-top:10px;">機種変更などに備えて、たまにバックアップの書き出しをおすすめします。バックアップはExcel（.xlsx）ファイルで書き出されます。書き出されるのは「集合場所」と「遠征先」の履歴のみで、参加者の情報は含まれません。Excelで中身を確認・編集して読み込み直すこともできます。データはこの端末のブラウザ内にのみ保存されます。うっかり変更してしまった場合は、右下の「元に戻す」ボタンで直前の状態に戻せます。</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ 使い方 ============ -->
+  <section class="view" id="view-howto">
+    <div class="card">
+      <h2>使い方</h2>
+      <p class="hint">知りたい項目をタップすると、説明が開きます。</p>
+      <details class="howto">
+        <summary>設定で集合場所・遠征先・参加者を追加する</summary>
+        <div class="body">「設定」タブで、集合場所・遠征先・参加者を新規登録します。住所・呼び名と緯度・経度を入力し（<code>Googleマップで調べる</code>リンクから住所検索し、地図を長押し（PCは右クリック）すると出てくる数値をコピーして貼り付けてください）、それぞれの「〜を追加」ボタンで登録します。参加者は1人ずつ登録できます。「設定」タブの各項目は、見出しをタップすると開閉します。登録済みの集合場所・遠征先は、「登録済みの履歴を管理する」から編集・削除できます。</div>
+      </details>
+      <details class="howto">
+        <summary>場所・参加者で選択する</summary>
+        <div class="body">「場所・参加者」タブで、集合場所は履歴から選びます。遠征先は履歴から選ぶか、名前と緯度・経度を直接入力します（「登録時に履歴にも保存する」にチェックすると、次回から履歴で選べます）。参加者は「一覧から選択」ボタンで一覧を開き、参加するメンバーのスイッチをONにします（参加人数は「参加者」の横に表示されます）。選び終えたら「登録」ボタンを押すと判定画面に移動します。新しい場所や参加者の追加は「設定」タブで行います。</div>
+      </details>
+      <details class="howto">
+        <summary>判定を実行する</summary>
+        <div class="body">「判定」タブの「判定を実行する」を押すと、各自の自宅から集合場所・遠征先までの道のり（「設定」タブの「距離・時間の取得元」で選んだ地図サービス。初期設定はOSRMという無料のサービス）を取得し、自動で「直行」か「集合経由」かを判定します。人数が多いと少し時間がかかります。「戻る」ボタンで「場所・参加者」画面に戻れます。「登録」を押すたびに、前回の判定結果はクリアされます。</div>
+      </details>
+      <details class="howto">
+        <summary>判定結果一覧表を保存・共有する</summary>
+        <div class="body">判定を実行すると、判定画面に「保存」「共有」ボタンが表示されます。A4横サイズの「判定結果一覧表」（全員の距離・時間・角度の評価、総合判定、台数判定、判定ロジックの説明つき）が、ボタンを押すと形式（画像（PNG）またはPDF）を選べます。「保存」なら端末に保存され、「共有」なら端末の共有メニューからLINEやメールなどで送れます。実行時の基準値も表に記載されます。</div>
+      </details>
+      <details class="howto">
+        <summary>判定ロジック</summary>
+        <div class="body">
+          <b>距離評価</b>：集合経由距離 − 直行距離 ≧ 距離差基準 → 直行（集合経由距離 ÷ 直行距離 ≧ 距離の倍率基準 でも直行）<br>
+          <b>時間評価</b>：集合経由時間 − 直行時間 ≧ 時間差基準 → 直行（集合経由時間 ÷ 直行時間 ≧ 時間の倍率基準 でも直行）<br>
+          <b>角度評価</b>：自宅から見た集合方向と遠征先方向の角度差（0〜180°）≧ 角度基準 → 直行<br>
+          （角度差が大きい＝集合場所が遠征先と逆方向＝寄り道が大きい、という考え方です）<br>
+          <b>総合判定</b>：「判定に使う項目」に選んだ項目（距離・時間・角度のうち）で、設定した条件数が「直行」なら総合判定＝「直行」。使わない項目は「対象外」になります。<br>
+          <b>台数判定</b>：直行の中から短縮距離が大きい順に、設定した上限台数まで「対象内」とします。
+        </div>
+      </details>
+      <details class="howto">
+        <summary>参加者を削除・復元する</summary>
+        <div class="body">参加者カードの削除ボタン（「場所・参加者」タブ）を押すと確認画面が出ます。削除しても一覧からは消えるだけで、データそのものは「場所・参加者」タブで参加者の一覧を開いた下部にある「削除履歴」に残ります。そこから「復元する」でいつでも元に戻せます。</div>
+      </details>
+      <details class="howto">
+        <summary>操作を取り消す（元に戻す）</summary>
+        <div class="body">入力・削除・初期化・データ読み込みなど、変更を伴う操作をすると画面右下に「元に戻す」ボタンが表示されます。タップすると直前の状態に戻せます（さかのぼれる回数には上限があります。ページを閉じる／再読み込みすると履歴は消えます）。</div>
+      </details>
+      <details class="howto">
+        <summary>初期設定に戻す</summary>
+        <div class="body">「設定」タブの「初期設定に戻す」を押すと、設定・参加者・判定結果がすべて工場出荷時の内容に置き換わります（画面の色は変わりません）。誤って押しても「元に戻す」で復元できます。</div>
+      </details>
+      <details class="howto">
+        <summary>画面の色を変える</summary>
+        <div class="body">画面右上のスイッチで、ライト（明るめ・初期設定）とダーク（暗め）をいつでも切り替えられます。</div>
+      </details>
+      <details class="howto">
+        <summary>データはどこに保存される？</summary>
+        <div class="body">すべてこの端末のブラウザ内（ローカル）に保存されます。サーバーには送信されません。距離・時間の計算時のみ、緯度経度が地図サービス（OSRM、取得元をGoogleにした場合はGoogle）に送信されます。Google APIキーはこの端末のブラウザ内にだけ保存され、バックアップや判定結果には含まれません。機種変更時は「設定」タブの「バックアップ書き出し」で集合場所・遠征先の履歴を引き継げます（参加者の情報は引き継がれません）。</div>
+      </details>
+      <details class="howto">
+        <summary>ホーム画面に追加する（アプリのように使う）</summary>
+        <div class="body">
+          <b>iPhone（Safari）</b>：共有ボタン → 「ホーム画面に追加」<br>
+          <b>Android（Chrome）</b>：右上メニュー → 「ホーム画面に追加」／「アプリをインストール」<br>
+          追加するとホーム画面のアイコンからアプリのように起動できます。
+        </div>
+      </details>
+      <details class="howto">
+        <summary>注意事項</summary>
+        <div class="body">距離・時間の計算には OSRM の公開デモサーバー（無料・登録不要）を使用しています。公開サーバーのため、極端に大量・頻繁な利用には向きません。継続的・大量に使う場合は自前サーバーや有料サービスの利用をご検討ください。移動は自動車（driving）を前提にしています。取得元をGoogleにした場合は、Google Routes APIの利用規約・料金（月5,000件まで無料のPro区分）が適用されます。APIキーはご自身で作成し、利用範囲の制限と1日の上限設定をおすすめします。キー入りのファイルを他の人に配ると、そのキーが使われます。</div>
+      </details>
+    </div>
+  </section>
+
+</main>
+
+<nav class="tabbar">
+  <button data-view="place-members" class="active">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21Z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="9.5" r="2.3" stroke="currentColor" stroke-width="1.6"/></svg>
+    場所・参加者
+  </button>
+  <button data-view="results">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M4 20V10m6.5 10V4m6.5 16v-7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+    判定
+  </button>
+  <button data-view="settings">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="1.7"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V19.6a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H4.4a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 6.05 7.4a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10.5A1.7 1.7 0 0 0 11.54 1.14V1a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V6.5a1.7 1.7 0 0 0 1.56 1.04H22a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.04Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+    設定
+  </button>
+  <button data-view="howto">
+    <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M9.6 9.3a2.4 2.4 0 1 1 3.4 2.2c-.9.5-1.3 1-1.3 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="16.6" r="0.9" fill="currentColor"/></svg>
+    使い方
+  </button>
+</nav>
+
+<div class="toast" id="toast"></div>
+<a class="filelink" id="filelink"></a>
+
+<div class="register-bar" id="register-bar">
+  <button type="button" class="btn primary" id="btn-register">
+      <svg viewBox="0 0 24 24" fill="none"><path d="m5 12.5 4.5 4.5L19 7.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      登録
+    </button>
+</div>
+
+<button class="undo-fab" id="btn-undo" type="button">
+  <svg viewBox="0 0 24 24" fill="none"><path d="M9 8 4 12l5 4M4 12h11a5 5 0 0 1 0 10h-1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <span>元に戻す</span>
+</button>
+
+<div class="pv-overlay" id="pv-overlay">
+  <div class="pv-head">
+    <div class="pv-title">出力プレビュー<small id="pv-sub"></small></div>
+    <div class="pv-zoom">
+      <button type="button" class="btn ghost" id="pv-zoom-out" aria-label="縮小">−</button>
+      <span id="pv-zoom-label">100%</span>
+      <button type="button" class="btn ghost" id="pv-zoom-in" aria-label="拡大">＋</button>
+    </div>
+    <button type="button" class="btn ghost" id="pv-close">閉じる</button>
+  </div>
+  <div class="pv-body" id="pv-body"></div>
+  <div class="pv-foot">
+    <button type="button" class="btn ghost" id="pv-save">保存</button>
+    <button type="button" class="btn ghost" id="pv-share">共有</button>
+  </div>
+</div>
+<div class="modal-overlay" id="export-modal-overlay">
+  <div class="modal-card">
+    <div class="modal-title" id="export-modal-title">保存</div>
+    <div class="modal-msg" id="export-modal-msg">形式を選んでください</div>
+    <div class="modal-actions" style="margin-bottom:10px;">
+      <button type="button" class="btn primary" id="export-pick-png">画像（PNG）</button>
+      <button type="button" class="btn primary" id="export-pick-pdf">PDF</button>
+    </div>
+    <button type="button" class="btn ghost" id="export-modal-cancel">キャンセル</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="history-modal-overlay">
+  <div class="modal-card hist-modal-card">
+    <div class="modal-title" id="history-modal-title">履歴の管理</div>
+    <div class="hist-view" id="history-list-view">
+      <div class="hist-list" id="history-modal-list"></div>
+      <div class="hist-modal-actions">
+        <button class="btn ghost" id="history-select-all">全選択/解除</button>
+        <button class="btn danger" id="history-delete-selected">選択を削除</button>
+        <button class="btn danger" id="history-delete-all">すべて削除</button>
+      </div>
+      <button class="btn ghost" id="history-modal-close" style="margin-top:10px;">閉じる</button>
+    </div>
+    <div class="hist-view" id="history-edit-view" style="display:none;">
+      <div class="field">
+        <label>住所・呼び名</label>
+        <input type="text" id="hist-edit-label">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>緯度<span class="req">*</span></label>
+          <input type="number" step="any" class="num" id="hist-edit-lat">
+        </div>
+        <div class="field">
+          <label>経度<span class="req">*</span></label>
+          <input type="number" step="any" class="num" id="hist-edit-lng">
+        </div>
+      </div>
+      <a class="maplink" id="hist-edit-map" href="#" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21Z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="9.5" r="2.3" stroke="currentColor" stroke-width="1.6"/></svg>
+        Google マップで調べる
+      </a>
+      <div class="edit-err" id="history-edit-err"></div>
+      <div class="hist-modal-actions" style="margin-top:8px;">
+        <button class="btn ghost" id="history-edit-cancel">キャンセル</button>
+        <button class="btn primary" id="history-edit-save">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="confirm-overlay">
+  <div class="modal-card">
+    <div class="modal-title" id="confirm-title">確認</div>
+    <div class="modal-msg" id="confirm-msg"></div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="confirm-cancel">キャンセル</button>
+      <button class="btn danger" id="confirm-ok">OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   直行直帰 判定ツール（Webアプリ版）
+   元のExcel VBA（modChokkoChokki）と同じ判定ロジックをJSで再実装
+============================================================ */
+
+const LS_KEY = 'cc_v1';
+const G_URL = 'https://routes.googleapis.com/directions/v2:computeRoutes';
+const G_KEY_LS = 'cc_gkey', G_USE_LS = 'cc_gusage';
+const G_FREE_CAP = 5000;   // Compute Routes Pro の月間無料枠（件）
+
+const DEFAULT_DATA = {
+  theme: 'day',
+  history: { meet: [], exp: [] },
+  settings: {
+    meetAddr: "",
+    meetLat: null,
+    meetLng: null,
+    meetHistId: null,
+    expAddr: "",
+    expLat: null,
+    expLng: null,
+    expHistId: null,
+    matchDate: "",
+    opponent: "",
+    distTh: 30,
+    timeTh: 40,
+    angleTh: 135,
+    distRatio: 3,
+    timeRatio: 3,
+    timeFactor: 1,
+    provider: 'osrm',
+    departAt: '',
+    avoidHighways: false,
+    avoidTolls: false,
+    useDist: true,
+    useTime: true,
+    useAngle: true,
+    needCount: 2,
+    maxCount: 2
+  },
+  members: [
+    { name:"内田", lat:35.176774032666003, lng:136.985612309261, active:true },
+    { name:"加田", lat:35.281937485050001, lng:137.000433489893, active:true },
+    { name:"菊岡", lat:35.195103867062699, lng:137.033012036603, active:true },
+    { name:"菊地", lat:35.208086655078901, lng:136.988672649015, active:true },
+    { name:"杉村", lat:35.0554789139577,   lng:136.94543826270501, active:true },
+    { name:"辻",   lat:35.1140419332975,   lng:137.02026907313299, active:true },
+    { name:"仲野", lat:35.2753657999979,   lng:136.979242483267, active:true },
+    { name:"中山", lat:35.1554420378543,   lng:137.187760658526, active:true },
+    { name:"西脇", lat:35.214437663784402, lng:137.023398947543, active:true },
+    { name:"古田", lat:35.3352535990199,   lng:137.147166527607, active:true },
+    { name:"本多", lat:35.2285514697219,   lng:137.05293841498701, active:true },
+    { name:"前川", lat:35.229068209684101, lng:137.053967003465, active:true },
+    { name:"森",   lat:35.223476362069803, lng:137.05195022369099, active:true },
+    { name:"鷲尾", lat:35.315467540533497, lng:136.947005600051, active:true }
+  ],
+  results: null
+};
+
+/* 過去の遠征実績（NC02・NC03、参考データ）を初期履歴として投入するための元データ。
+   一度だけ投入され、以後は state.historySeeded フラグで再投入されないようにする。 */
+const SEED_HISTORY_EXP_RAW = [
+  {label:"木場南グラウンドB面",lat:35.0509856540206,lng:136.828185783008,note:"愛知県海部郡飛島村金岡",date:"2026-05-10"},
+  {label:"ドリームオーシャンスタジアム",lat:34.5453085085022,lng:136.505417266358,note:"三重県松阪市立野町1370",date:"2026-05-17"},
+  {label:"上野グラウンド",lat:35.0486501227195,lng:136.781075939177,note:"愛知県弥富市上野町",date:"2026-07-11"},
+  {label:"四日市市霞ケ浦第３野球場",lat:34.9820100496777,lng:136.646740776964,note:"三重県四日市市羽津乙",date:"2026-08-02"},
+  {label:"三州ボーイズ/オーシャン",lat:34.7912424694413,lng:137.019012038902,note:"愛知県西尾市一色町坂田新田築合",date:"2026-08-09"},
+  {label:"四日市ボーイズ菰野グラウンド",lat:35.0423533168703,lng:136.485278267745,note:"三重県三重郡菰野町千草6569-4",date:"2026-06-07"},
+  {label:"岡崎市龍北総合運動場 野球場",lat:34.9785690947729,lng:137.188146243148,note:"練習試合",date:"2026-03-15"},
+  {label:"千疋グラウンド(岐阜県関市)",lat:35.4873943033112,lng:136.848151639191,note:"練習試合",date:"2026-04-05"},
+  {label:"あさがおスタジアム(白山市立野球場)",lat:36.5161338162336,lng:136.51888532758,note:"公式戦",date:"2026-04-11"},
+  {label:"毘森公園野球場",lat:35.0894194937379,lng:137.14644655452,note:"公式戦",date:"2026-04-11"},
+  {label:"名古屋刑務所横 ひばりヶ丘グラウンド",lat:35.116046666037,lng:137.118761725686,note:"練習試合",date:"2026-04-19"},
+  {label:"関市立関商工高等学校",lat:35.4544212772954,lng:136.900446648858,note:"練習試合",date:"2026-05-05"},
+  {label:"愛知県立武豊高等学校",lat:34.8428341147303,lng:136.900662189574,note:"練習試合",date:"2026-05-05"},
+  {label:"郡上市民球場(旧白鳥市民球場)",lat:35.8822849204569,lng:136.868819741052,note:"公式戦",date:"2026-05-16"},
+  {label:"ヤマギシ豊里球場",lat:34.7892918731928,lng:136.451806681498,note:"練習試合",date:"2026-05-17"},
+  {label:"蒲郡球場",lat:34.8048644000838,lng:137.173254810334,note:"公式戦",date:"2026-05-23"},
+  {label:"菰野朝上リトルシニア専用グラウンド",lat:35.0781405155927,lng:136.523193596849,note:"練習試合",date:"2026-06-07"},
+  {label:"名古屋西リトルシニア専用グラウンド",lat:35.1765699115993,lng:136.841898025688,note:"練習試合",date:"2026-06-14"},
+  {label:"白山グラウンド(三重県津市)",lat:34.65301088622,lng:136.340543968,note:"練習試合",date:"2026-06-20"},
+  {label:"東浦南部グラウンド",lat:34.944480568637,lng:136.976665041022,note:"練習試合",date:"2026-06-20"},
+  {label:"半田北部グラウンド",lat:34.9376913709733,lng:136.941291655621,note:"公式戦",date:"2026-06-21"},
+  {label:"名古屋北リトルシニア専用グラウンド",lat:35.2392965911126,lng:136.992228410348,note:"公式戦",date:"2026-06-27"},
+  {label:"坂巻運動広場",lat:35.3545414814871,lng:136.725180096858,note:"練習試合",date:"2026-06-27"},
+  {label:"バンテリンドームナゴヤ",lat:35.1862041604934,lng:136.947440399997,note:"公式戦",date:"2026-07-24"},
+  {label:"砺波市民球場",lat:36.6459001031335,lng:137.0013341969,note:"公式戦",date:"2026-07-25"},
+  {label:"岐阜県立多治見工業高等学校グラウンド",lat:35.3293656219493,lng:137.137944563505,note:"練習試合",date:"2026-08-02"},
+  {label:"松岡総合運動公園(福井県)",lat:36.063422,lng:136.294822,note:"公式戦",date:"2026-08-11"},
+  {label:"豊田ボーイズ専用矢並グラウンド",lat:35.101526,lng:137.234741,note:"愛知県豊田市矢並町清徳103",date:"2026-10-24"},
+  {label:"揖斐本巣ボーイズ専用グラウンド",lat:35.54042,lng:136.641043,note:"岐阜県本巣市神海1299",date:"2026-11-22"}
+];
+const SEED_HISTORY_MEET_RAW = [
+  {label:"YUKI駐車場",lat:35.2556972589864,lng:137.029416781248,note:"",date:""},
+  {label:"NIS-STF駐車場",lat:35.2422112387378,lng:137.031232906526,note:"愛知県名古屋市守山区中志段味南原２６８６",date:""},
+  {label:"NIS-P5駐車場",lat:35.2419619147669,lng:137.033049634704,note:"愛知県名古屋市守山区中志段味南原２６８６",date:""},
+  {label:"NIS-P6駐車場",lat:35.2453215560122,lng:137.030228219667,note:"愛知県名古屋市守山区中志段味南原２６８６",date:""},
+  {label:"ISE駐車場",lat:35.2454962870199,lng:137.0243792913,note:"愛知県名古屋市守山区",date:""},
+  {label:"MGC第3駐車場",lat:35.2528058390486,lng:137.008794410299,note:"愛知県春日井市堀ノ内町３丁目",date:""}
+];
+function toHistEntry(e){
+  return {
+    id: uid(),
+    label: e.label,
+    lat: e.lat,
+    lng: e.lng,
+    note: e.note || '',
+    date: e.date || '',
+    savedAt: e.date ? new Date(e.date).getTime() : Date.now()
+  };
+}
+
+let state = loadState();
+
+function loadState(){
+  let data = null;
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw) data = JSON.parse(raw);
+  }catch(e){}
+  if(!data) data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  if(data.theme !== 'night') data.theme = 'day';
+  if(!Array.isArray(data.members)) data.members = [];
+  data.members.forEach(m=>{
+    if(typeof m.deleted !== 'boolean') m.deleted = false;
+  });
+  if(!data.settings) data.settings = JSON.parse(JSON.stringify(DEFAULT_DATA.settings));
+  ['useDist','useTime','useAngle'].forEach(k=>{ if(typeof data.settings[k] !== 'boolean') data.settings[k] = true; });
+  if(!Number.isFinite(data.settings.timeFactor) || data.settings.timeFactor < 1) data.settings.timeFactor = 1;
+  if(data.settings.provider !== 'google') data.settings.provider = 'osrm';
+  if(typeof data.settings.departAt !== 'string') data.settings.departAt = '';
+  ['avoidHighways','avoidTolls'].forEach(k=>{ if(typeof data.settings[k] !== 'boolean') data.settings[k] = false; });
+  if(![1,2,3].includes(data.settings.needCount)) data.settings.needCount = 2;
+  ['distTh','timeTh','angleTh'].forEach(k=>{ if(!Number.isFinite(data.settings[k])) data.settings[k] = DEFAULT_DATA.settings[k]; });
+  if(data.settings.meetHistId === undefined) data.settings.meetHistId = null;
+  if(data.settings.expHistId === undefined) data.settings.expHistId = null;
+  if(!data.history) data.history = { meet: [], exp: [] };
+  if(!Array.isArray(data.history.meet)) data.history.meet = [];
+  if(!Array.isArray(data.history.exp)) data.history.exp = [];
+  // historySeededVersion: 1=遠征先実績20件を投入済み, 2=集合場所（名称付き）6件を投入済み
+  if(data.historySeeded === true && !data.historySeededVersion) data.historySeededVersion = 1;
+  if(!data.historySeededVersion) data.historySeededVersion = 0;
+  let seedChanged = false;
+  if(data.historySeededVersion < 1){
+    const existingExpLabels = new Set(data.history.exp.map(h=>h.label));
+    const seedExp = SEED_HISTORY_EXP_RAW.filter(e=>!existingExpLabels.has(e.label)).map(toHistEntry);
+    data.history.exp = seedExp.concat(data.history.exp);
+    seedChanged = true;
+  }
+  if(data.historySeededVersion < 2){
+    const existingMeetLabels = new Set(data.history.meet.map(h=>h.label));
+    const seedMeet = SEED_HISTORY_MEET_RAW.filter(e=>!existingMeetLabels.has(e.label)).map(toHistEntry);
+    data.history.meet = seedMeet.concat(data.history.meet);
+    seedChanged = true;
+  }
+  if(data.historySeededVersion < 3){
+    // v3: 集合場所の初期リストに誤って含めていた「YUKI駐車場」（社名住所）を削除
+    const beforeLen = data.history.meet.length;
+    data.history.meet = data.history.meet.filter(h => h.label !== 'YUKI駐車場');
+    if(data.history.meet.length !== beforeLen) seedChanged = true;
+  }
+  if(data.historySeededVersion < 4){
+    // v4: 「YUKI駐車場」自体は選択肢として残し、表示していた住所（note）だけを消す
+    const yuki = SEED_HISTORY_MEET_RAW.find(e => e.label === 'YUKI駐車場');
+    const existing = data.history.meet.find(h => h.label === 'YUKI駐車場');
+    if(existing){
+      if(existing.note){ existing.note = ''; seedChanged = true; }
+    } else if(yuki){
+      data.history.meet.unshift(toHistEntry(yuki));
+      seedChanged = true;
+    }
+  }
+  if(data.historySeededVersion < 5){
+    // v5: 遠征先の初期リストに漏れていた6件（木場南グラウンドB面 他）を追加
+    const existingExpLabels2 = new Set(data.history.exp.map(h=>h.label));
+    const missingExp = SEED_HISTORY_EXP_RAW.slice(0, 6).filter(e=>!existingExpLabels2.has(e.label)).map(toHistEntry);
+    if(missingExp.length){
+      data.history.exp = missingExp.concat(data.history.exp);
+      seedChanged = true;
+    }
+  }
+  if(data.historySeededVersion < 6){
+    // v6: 遠征先の初期リストを更新（新規3件を追加／日付が空だった先頭6件に日付を補完）
+    const have = new Set(data.history.exp.map(h=>h.label));
+    const addNew = SEED_HISTORY_EXP_RAW.slice(26).filter(e=>!have.has(e.label)).map(toHistEntry);
+    if(addNew.length) data.history.exp = data.history.exp.concat(addNew);
+    SEED_HISTORY_EXP_RAW.slice(0, 6).forEach(e=>{
+      const cur = data.history.exp.find(h=>h.label === e.label);
+      if(cur && !cur.date && e.date){ cur.date = e.date; cur.savedAt = new Date(e.date).getTime(); }
+    });
+    seedChanged = true;
+  }
+  if(seedChanged){
+    data.historySeededVersion = 6;
+    data.historySeeded = true;
+    try{ localStorage.setItem(LS_KEY, JSON.stringify(data)); }catch(e){}
+  }
+  return data;
+}
+function saveState(){
+  localStorage.setItem(LS_KEY, JSON.stringify(state));
+}
+function uid(){ return Math.random().toString(36).slice(2,9); }
+state.members.forEach(m=>{ if(!m.id) m.id = uid(); });
+
+/* ---------------- Undo stack ---------------- */
+let undoStack = [];
+const UNDO_MAX = 30;
+function pushUndo(){
+  try{
+    undoStack.push(JSON.stringify(state));
+    if(undoStack.length > UNDO_MAX) undoStack.shift();
+    updateUndoButton();
+  }catch(e){}
+}
+function updateUndoButton(){
+  const activeTab = document.querySelector('nav.tabbar button.active');
+  const onPlaceMembers = !!activeTab && activeTab.dataset.view === 'place-members';
+  document.getElementById('btn-undo').style.display = (undoStack.length && onPlaceMembers) ? 'flex' : 'none';
+}
+function performUndo(){
+  if(!undoStack.length) return;
+  const prev = undoStack.pop();
+  const curTheme = state.theme;
+  state = JSON.parse(prev);
+  state.theme = curTheme;
+  saveState();
+  fillSettingsForm();
+  renderMembers();
+  renderResults();
+  applyTheme(state.theme || 'day');
+  updateUndoButton();
+  toast('操作を元に戻しました');
+}
+document.getElementById('btn-undo').addEventListener('click', performUndo);
+
+/* ---------------- Confirm modal ---------------- */
+let confirmCallback = null;
+function showConfirm(opts){
+  document.getElementById('confirm-title').textContent = opts.title || '確認';
+  document.getElementById('confirm-msg').textContent = opts.message || '';
+  const okBtn = document.getElementById('confirm-ok');
+  okBtn.textContent = opts.okLabel || 'OK';
+  okBtn.className = 'btn ' + (opts.danger === false ? 'primary' : 'danger');
+  confirmCallback = opts.onOk || null;
+  document.getElementById('confirm-overlay').classList.add('show');
+}
+function hideConfirm(){
+  document.getElementById('confirm-overlay').classList.remove('show');
+  confirmCallback = null;
+}
+document.getElementById('confirm-cancel').addEventListener('click', hideConfirm);
+document.getElementById('confirm-overlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'confirm-overlay') hideConfirm();
+});
+document.getElementById('confirm-ok').addEventListener('click', ()=>{
+  const cb = confirmCallback;
+  hideConfirm();
+  if(cb) cb();
+});
+
+/* ---------------- Theme ---------------- */
+function applyTheme(name){
+  const mode = name === 'night' ? 'night' : 'day';
+  document.documentElement.setAttribute('data-theme', mode);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  const map = { day:'#f3f5f9', night:'#0f1c2e' };
+  if(meta) meta.setAttribute('content', map[mode]);
+  const sw = document.getElementById('theme-toggle');
+  if(sw) sw.setAttribute('aria-checked', mode === 'night' ? 'true' : 'false');
+}
+document.getElementById('theme-toggle').addEventListener('click', ()=>{
+  state.theme = state.theme === 'night' ? 'day' : 'night';
+  saveState();
+  applyTheme(state.theme);
+});
+applyTheme(state.theme);
+
+/* ---------------- Tab navigation ---------------- */
+const views = {
+  'place-members': document.getElementById('view-place-members'),
+  results: document.getElementById('view-results'),
+  settings: document.getElementById('view-settings'),
+  howto: document.getElementById('view-howto'),
+};
+/* 判定結果を保存・共有したかどうか（結果ごとに記録。新しく判定すると未保存に戻る） */
+let rpExportedGen = null;
+function rpMarkExported(){
+  if(state.results) rpExportedGen = state.results.generatedAt;
+}
+function switchTab(name, force){
+  /* 判定が実行された後、判定画面から場所・参加者画面へ戻るときは、前回の登録内容をクリアする */
+  const prevBtn = document.querySelector('nav.tabbar button.active');
+  const prevView = prevBtn ? prevBtn.dataset.view : null;
+  if(prevView === 'results' && name === 'place-members' && state.results){
+    /* 保存・共有をしていない場合は、クリアしてよいか確認する */
+    if(!force && rpExportedGen !== state.results.generatedAt){
+      showConfirm({
+        title: '判定結果を保存・共有していません',
+        message: '判定結果を保存・共有していません。このまま戻ると、判定結果と前回の登録内容がクリアされます。クリアしてもよろしいですか？',
+        okLabel: 'クリアして戻る',
+        onOk: () => { switchTab(name, true); window.scrollTo(0, 0); }
+      });
+      return;
+    }
+    clearSelection();
+  }
+  document.querySelectorAll('nav.tabbar button').forEach(b=>b.classList.toggle('active', b.dataset.view === name));
+  Object.values(views).forEach(v=>v.classList.remove('active'));
+  views[name].classList.add('active');
+  document.getElementById('register-bar').style.display = (name === 'place-members') ? 'flex' : 'none';
+  try{ updateUndoButton(); }catch(e){}   // 「元に戻す」は場所・参加者画面のみ表示
+}
+document.querySelectorAll('nav.tabbar button').forEach(btn=>{
+  btn.addEventListener('click', ()=>switchTab(btn.dataset.view));
+});
+switchTab('place-members');
+
+/* ---------------- Toast ---------------- */
+let toastTimer;
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('show'), 2200);
+}
+
+/* ---------------- Settings form (判定の基準値のみ。集合場所・遠征先は「場所・参加者」の履歴選択で設定される) ---------------- */
+const sIds = ['distTh','timeTh','angleTh','needCount','distRatio','timeRatio','timeFactor'];
+/* 選択式の項目：選べる値の一覧（保存済みの値が一覧にない場合は、その値も選択肢に加える） */
+const SEL_DEFS = {
+  distTh:    { vals:[5,10,15,20,25,30,35,40,45,50,60,70,80,90,100], fmt:v=>`${v} km` },
+  timeTh:    { vals:[5,10,15,20,25,30,35,40,45,50,60,70,80,90,100,120], fmt:v=>`${v} 分` },
+  angleTh:   { vals:Array.from({length:19}, (_, i) => 90 + i*5), fmt:v=>`${v}°` },   // 90〜180°を5°刻み
+  needCount: { vals:[3,2,1], fmt:v=> v === 3 ? '3つすべて該当' : `${v}つ以上該当`, keepOrder:true },
+  distRatio: { vals:[1.5,2,2.5,3,4,5], fmt:v=>`${v} 倍`, none:'使用しない' },
+  timeRatio: { vals:[1.5,2,2.5,3,4,5], fmt:v=>`${v} 倍`, none:'使用しない' },
+  timeFactor:{ vals:Array.from({length:21}, (_, i) => Math.round((1 + i*0.1)*10)/10), fmt:v=> v === 1 ? '補正なし（1.0 倍）' : `${v.toFixed(1)} 倍` }
+};
+/* 判定に使う項目 */
+const USE_KEYS = ['useDist','useTime','useAngle'];
+function enabledCount(st){ return USE_KEYS.filter(k => (st || state.settings)[k] !== false).length; }
+function applyUseState(){
+  const st = state.settings;
+  document.getElementById('s-useDist').checked  = st.useDist !== false;
+  document.getElementById('s-useTime').checked  = st.useTime !== false;
+  document.getElementById('s-useAngle').checked = st.useAngle !== false;
+  [['useDist',['distTh','distRatio']], ['useTime',['timeTh','timeRatio','timeFactor']], ['useAngle',['angleTh']]].forEach(([u, ids]) => {
+    ids.forEach(id => { document.getElementById('s-'+id).disabled = (st[u] === false); });
+  });
+}
+function buildSelectOptions(k){
+  const el = document.getElementById('s-'+k), def = SEL_DEFS[k];
+  const cur = state.settings[k];
+  if(k === 'needCount'){
+    const n = enabledCount();
+    const c = Math.min([1,2,3].includes(cur) ? cur : 2, n);
+    state.settings.needCount = c;
+    let h = '';
+    for(let v = n; v >= 1; v--) h += `<option value="${v}">${v === n ? (n === 1 ? '1つ該当' : `${n}つすべて該当`) : `${v}つ以上該当`}</option>`;
+    el.innerHTML = h;
+    return;
+  }
+  const vals = def.vals.slice();
+  if(typeof cur === 'number' && isFinite(cur) && !vals.includes(cur)){
+    vals.push(cur);
+    if(!def.keepOrder) vals.sort((a,b)=>a-b);
+  }
+  el.innerHTML = (def.none ? `<option value="">${def.none}</option>` : '') +
+    vals.map(v=>`<option value="${v}">${def.fmt(v)}</option>`).join('');
+}
+function fillSettingsForm(){
+  applyUseState();
+  fillRouteSettings();
+  sIds.forEach(k=>{
+    if(SEL_DEFS[k]) buildSelectOptions(k);
+    const el = document.getElementById('s-'+k);
+    const v = state.settings[k];
+    el.value = (v === null || v === undefined) ? '' : v;
+  });
+  renderAllHistorySelects();
+  fillExpDirect();
+  fillMatchInfo();
+  fillMaxCountField();
+}
+function readSettingsForm(){
+  sIds.forEach(k=>{
+    const el = document.getElementById('s-'+k);
+    state.settings[k] = el.value === '' ? null : parseFloat(el.value);
+  });
+  saveState();
+}
+sIds.forEach(k=>{
+  const el = document.getElementById('s-'+k);
+  el.addEventListener('focus', ()=>pushUndo());
+  el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', readSettingsForm);
+});
+USE_KEYS.forEach(k=>{
+  const cb = document.getElementById('s-'+k);
+  cb.addEventListener('change', ()=>{
+    const st = state.settings;
+    const after = USE_KEYS.filter(u => u === k ? cb.checked : st[u] !== false).length;
+    if(after === 0){ cb.checked = true; toast('少なくとも1項目は選んでください'); return; }
+    pushUndo();
+    st[k] = cb.checked;
+    applyUseState();
+    buildSelectOptions('needCount');
+    document.getElementById('s-needCount').value = st.needCount;
+    saveState();
+  });
+});
+/* ---------------- 距離・時間の取得元の設定 ---------------- */
+function fillRouteSettings(){
+  const st = state.settings;
+  document.getElementById('s-provider').value = (st.provider === 'google') ? 'google' : 'osrm';
+  document.getElementById('s-gkey').value = gKeyGet();
+  document.getElementById('s-depart').value = st.departAt || '';
+  document.getElementById('s-avoidHighways').checked = !!st.avoidHighways;
+  document.getElementById('s-avoidTolls').checked = !!st.avoidTolls;
+  document.getElementById('google-box').style.display = (st.provider === 'google') ? '' : 'none';
+  gRenderUsage();
+}
+document.getElementById('s-provider').addEventListener('change', e=>{
+  pushUndo();
+  state.settings.provider = e.target.value === 'google' ? 'google' : 'osrm';
+  saveState();
+  document.getElementById('google-box').style.display = (state.settings.provider === 'google') ? '' : 'none';
+});
+document.getElementById('s-gkey').addEventListener('input', e=>{ gKeySet(e.target.value); });
+document.getElementById('s-depart').addEventListener('change', e=>{
+  pushUndo(); state.settings.departAt = e.target.value || ''; saveState();
+});
+['avoidHighways','avoidTolls'].forEach(k=>{
+  document.getElementById('s-'+k).addEventListener('change', e=>{
+    pushUndo(); state.settings[k] = e.target.checked; saveState();
+  });
+});
+document.getElementById('btn-gtest').addEventListener('click', async ()=>{
+  const btn = document.getElementById('btn-gtest'), out = document.getElementById('g-test-result');
+  if(!gKeyGet()){ out.textContent = '先にAPIキーを入力してください。'; return; }
+  btn.disabled = true; out.textContent = '確認中...';
+  try{
+    const r = await getRouteGoogle(35.1709, 136.8815, 35.1681, 136.9083);   // 名古屋駅 → 栄
+    out.textContent = `成功：名古屋駅→栄で 距離 ${r.km.toFixed(1)} km／時間 ${Math.round(r.min)} 分（Googleマップと見比べてみてください）`;
+  }catch(err){
+    out.textContent = '失敗：' + err.message;
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+/* 遠征先の直接入力（場所・参加者タブ）：履歴を選ぶとここに反映され、直接書き換えることもできる */
+function updateExpMapLink(){
+  const lat = document.getElementById('pm-expLat').value;
+  const lng = document.getElementById('pm-expLng').value;
+  document.getElementById('pm-expMapLink').href = mapSearchUrl(
+    document.getElementById('pm-expAddr').value,
+    lat === '' ? null : parseFloat(lat), lng === '' ? null : parseFloat(lng));
+}
+/* 直行直帰 台数上限（場所・参加者タブ） */
+function fillMaxCountField(){
+  const v = state.settings.maxCount;
+  document.getElementById('pm-maxCount').value = (v === null || v === undefined) ? '' : v;
+}
+document.getElementById('pm-maxCount').addEventListener('focus', ()=>pushUndo());
+document.getElementById('pm-maxCount').addEventListener('input', e=>{
+  state.settings.maxCount = e.target.value === '' ? null : parseFloat(e.target.value);
+  saveState();
+});
+/* 試合情報（日付・対戦相手） */
+function rpTodayStr(){
+  const d = new Date(), p = v => String(v).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+}
+function rpFmtMatchDate(str){            // 2026-10-11 → 2026/10/11
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(str || '');
+  return m ? `${m[1]}/${+m[2]}/${+m[3]}` : '';
+}
+function fillMatchInfo(){
+  const s = state.settings;
+  document.getElementById('pm-matchDate').value = s.matchDate || rpTodayStr();
+  document.getElementById('pm-opponent').value = s.opponent || '';
+}
+document.getElementById('pm-matchDate').addEventListener('focus', ()=>pushUndo());
+document.getElementById('pm-matchDate').addEventListener('input', e=>{ state.settings.matchDate = e.target.value || ''; saveState(); });
+document.getElementById('pm-opponent').addEventListener('focus', ()=>pushUndo());
+document.getElementById('pm-opponent').addEventListener('input', e=>{ state.settings.opponent = e.target.value; saveState(); });
+
+function fillExpDirect(){
+  const s = state.settings;
+  document.getElementById('pm-expAddr').value = s.expAddr || '';
+  document.getElementById('pm-expLat').value = isNum(s.expLat) ? s.expLat : '';
+  document.getElementById('pm-expLng').value = isNum(s.expLng) ? s.expLng : '';
+  updateExpMapLink();
+}
+['Addr','Lat','Lng'].forEach(suf=>{
+  const el = document.getElementById('pm-exp' + suf);
+  el.addEventListener('focus', ()=>pushUndo());
+  el.addEventListener('input', ()=>{
+    const s = state.settings;
+    if(suf === 'Addr') s.expAddr = el.value;
+    else s['exp' + suf] = el.value === '' ? null : parseFloat(el.value);
+    s.expHistId = null;
+    document.getElementById('pm-expHistSel').value = '';
+    saveState();
+    updateExpMapLink();
+  });
+});
+function mapSearchUrl(addr, lat, lng){
+  if(addr && addr.trim()){
+    return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(addr);
+  }
+  if(isNum(lat) && isNum(lng)){
+    return 'https://www.google.com/maps/search/?api=1&query=' + lat + ',' + lng;
+  }
+  return 'https://www.google.com/maps';
+}
+fillSettingsForm();
+
+/* ---------------- Location history (集合場所/遠征先) ---------------- */
+const HIST_LABELS = { meet: '集合場所', exp: '遠征先' };
+
+function renderHistorySelect(type){
+  const list = state.history[type];
+  const optionsHtml = '<option value="">-- 一覧・履歴からの選択 --</option>' +
+    list.map(h => `<option value="${h.id}">${escapeHtml(h.label)}</option>`).join('');
+  const currentId = state.settings[type + 'HistId'] || '';
+  const stillExists = currentId && list.some(h => h.id === currentId);
+  ['s-' + type + 'HistSel', 'pm-' + type + 'HistSel'].forEach(id=>{
+    const sel = document.getElementById(id);
+    if(!sel) return;
+    sel.innerHTML = optionsHtml;
+    sel.value = stillExists ? currentId : '';
+  });
+}
+function renderAllHistorySelects(){
+  renderHistorySelect('meet');
+  renderHistorySelect('exp');
+}
+
+function applyHistorySelection(type, id){
+  if(!id) return;
+  const entry = state.history[type].find(h => h.id === id);
+  if(!entry) return;
+  pushUndo();
+  state.settings[type + 'Addr'] = entry.label;
+  state.settings[type + 'Lat'] = entry.lat;
+  state.settings[type + 'Lng'] = entry.lng;
+  state.settings[type + 'HistId'] = entry.id;
+  saveState();
+  fillSettingsForm();
+  toast(`「${entry.label}」を${HIST_LABELS[type]}に設定しました`);
+}
+document.getElementById('pm-meetHistSel').addEventListener('change', (e)=>applyHistorySelection('meet', e.target.value));
+document.getElementById('pm-expHistSel').addEventListener('change', (e)=>applyHistorySelection('exp', e.target.value));
+
+/* ---------------- 集合場所・遠征先の「追加」フォーム（設定タブ）：既存の選択状態とは独立した新規登録専用フォーム ---------------- */
+function updateAddMapLink(type){
+  const addr = document.getElementById('add-'+type+'Addr').value;
+  const lat = document.getElementById('add-'+type+'Lat').value;
+  const lng = document.getElementById('add-'+type+'Lng').value;
+  document.getElementById('add-'+type+'MapLink').href =
+    mapSearchUrl(addr, lat === '' ? null : parseFloat(lat), lng === '' ? null : parseFloat(lng));
+}
+['meet','exp'].forEach(type=>{
+  ['Addr','Lat','Lng'].forEach(suf=>{
+    document.getElementById('add-'+type+suf).addEventListener('input', ()=>updateAddMapLink(type));
+  });
+  updateAddMapLink(type);
+});
+function addLocationFromDraft(type){
+  const addrEl = document.getElementById('add-'+type+'Addr');
+  const latEl = document.getElementById('add-'+type+'Lat');
+  const lngEl = document.getElementById('add-'+type+'Lng');
+  const addr = addrEl.value.trim();
+  const lat = latEl.value === '' ? null : parseFloat(latEl.value);
+  const lng = lngEl.value === '' ? null : parseFloat(lngEl.value);
+  if(!addr){ toast('住所・呼び名を入力してください'); return; }
+  if(!isNum(lat) || !isNum(lng)){ toast('緯度・経度を入力してください'); return; }
+  pushUndo();
+  const list = state.history[type];
+  const existing = list.find(h => h.label === addr);
+  if(existing){
+    existing.lat = lat; existing.lng = lng; existing.savedAt = Date.now();
+    toast(`「${addr}」を更新しました（同じ名前があったため上書き）`);
+  } else {
+    list.unshift({ id: uid(), label: addr, lat, lng, savedAt: Date.now() });
+    toast(`「${addr}」を${HIST_LABELS[type]}に追加しました`);
+  }
+  saveState();
+  renderHistorySelect(type);
+  addrEl.value = ''; latEl.value = ''; lngEl.value = '';
+  updateAddMapLink(type);
+}
+document.getElementById('btn-meetAdd').addEventListener('click', ()=>addLocationFromDraft('meet'));
+document.getElementById('btn-expAdd').addEventListener('click', ()=>addLocationFromDraft('exp'));
+
+/* History manager modal */
+let historyManagerType = null;
+function openHistoryManager(type){
+  historyManagerType = type;
+  historyEditId = null;
+  showHistoryEditView(false);
+  renderHistoryModalList();
+  document.getElementById('history-modal-overlay').classList.add('show');
+}
+function closeHistoryManager(){
+  document.getElementById('history-modal-overlay').classList.remove('show');
+  historyManagerType = null;
+}
+function renderHistoryModalList(){
+  const list = state.history[historyManagerType] || [];
+  const box = document.getElementById('history-modal-list');
+  if(!list.length){
+    box.innerHTML = '<div class="hist-empty">保存された履歴はまだありません</div>';
+    return;
+  }
+  box.innerHTML = list.map(h => `
+    <div class="hist-item">
+      <label class="hist-main">
+        <input type="checkbox" data-id="${h.id}">
+        <div class="hist-info">
+          <div class="hist-label">${escapeHtml(h.label)}</div>
+          <div class="hist-coord">${h.lat}, ${h.lng}${h.note ? '　・　' + escapeHtml(h.note) : ''}${h.date ? '　・　' + escapeHtml(h.date) : ''}</div>
+        </div>
+      </label>
+      <button type="button" class="hist-edit-btn" data-edit="${h.id}">編集</button>
+    </div>
+  `).join('');
+  box.querySelectorAll('[data-edit]').forEach(btn=>{
+    btn.addEventListener('click', ()=>openHistoryEdit(btn.dataset.edit));
+  });
+}
+
+/* 履歴の編集（名前・緯度・経度） */
+let historyEditId = null;
+function showHistoryEditView(show){
+  document.getElementById('history-list-view').style.display = show ? 'none' : '';
+  document.getElementById('history-edit-view').style.display = show ? '' : 'none';
+  document.getElementById('history-modal-title').textContent =
+    HIST_LABELS[historyManagerType] + (show ? 'を編集' : 'の履歴を管理');
+}
+function updateHistEditMapLink(){
+  const lat = document.getElementById('hist-edit-lat').value;
+  const lng = document.getElementById('hist-edit-lng').value;
+  document.getElementById('hist-edit-map').href = mapSearchUrl(
+    document.getElementById('hist-edit-label').value,
+    lat === '' ? null : parseFloat(lat), lng === '' ? null : parseFloat(lng));
+}
+['label','lat','lng'].forEach(k=>{
+  document.getElementById('hist-edit-'+k).addEventListener('input', updateHistEditMapLink);
+});
+function openHistoryEdit(id){
+  const entry = state.history[historyManagerType].find(h => h.id === id);
+  if(!entry) return;
+  historyEditId = id;
+  document.getElementById('hist-edit-label').value = entry.label;
+  document.getElementById('hist-edit-lat').value = entry.lat;
+  document.getElementById('hist-edit-lng').value = entry.lng;
+  document.getElementById('history-edit-err').textContent = '';
+  updateHistEditMapLink();
+  showHistoryEditView(true);
+}
+document.getElementById('history-edit-cancel').addEventListener('click', ()=>{
+  historyEditId = null;
+  showHistoryEditView(false);
+});
+document.getElementById('history-edit-save').addEventListener('click', ()=>{
+  const type = historyManagerType;
+  const entry = state.history[type].find(h => h.id === historyEditId);
+  if(!entry) return;
+  const errEl = document.getElementById('history-edit-err');
+  const label = document.getElementById('hist-edit-label').value.trim();
+  const latV = document.getElementById('hist-edit-lat').value;
+  const lngV = document.getElementById('hist-edit-lng').value;
+  const lat = latV === '' ? null : parseFloat(latV);
+  const lng = lngV === '' ? null : parseFloat(lngV);
+  if(!label){ errEl.textContent = '住所・呼び名を入力してください'; return; }
+  if(!isNum(lat) || !isNum(lng)){ errEl.textContent = '緯度・経度を入力してください'; return; }
+  if(state.history[type].some(h => h.id !== entry.id && h.label === label)){
+    errEl.textContent = '同じ名前の履歴がすでにあります。別の名前にしてください'; return;
+  }
+  pushUndo();
+  entry.label = label; entry.lat = lat; entry.lng = lng;
+  if(state.settings[type + 'HistId'] === entry.id){
+    state.settings[type + 'Addr'] = label;
+    state.settings[type + 'Lat'] = lat;
+    state.settings[type + 'Lng'] = lng;
+  }
+  saveState();
+  renderHistorySelect(type);
+  fillExpDirect();
+  historyEditId = null;
+  showHistoryEditView(false);
+  renderHistoryModalList();
+  toast(`「${label}」を更新しました`);
+});
+document.getElementById('btn-meetHistManage').addEventListener('click', ()=>openHistoryManager('meet'));
+document.getElementById('btn-expHistManage').addEventListener('click', ()=>openHistoryManager('exp'));
+document.getElementById('history-modal-close').addEventListener('click', closeHistoryManager);
+document.getElementById('history-modal-overlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'history-modal-overlay') closeHistoryManager();
+});
+document.getElementById('history-select-all').addEventListener('click', ()=>{
+  const boxes = document.querySelectorAll('#history-modal-list input[type=checkbox]');
+  if(!boxes.length) return;
+  const allChecked = Array.from(boxes).every(b => b.checked);
+  boxes.forEach(b => b.checked = !allChecked);
+});
+document.getElementById('history-delete-selected').addEventListener('click', ()=>{
+  const boxes = document.querySelectorAll('#history-modal-list input[type=checkbox]:checked');
+  if(!boxes.length){ toast('削除する項目を選択してください'); return; }
+  const ids = Array.from(boxes).map(b => b.dataset.id);
+  const type = historyManagerType;
+  showConfirm({
+    title: '選択した履歴を削除しますか？',
+    message: `${ids.length}件の履歴を削除します。この操作は元に戻せません。`,
+    okLabel: '削除する',
+    danger: true,
+    onOk: ()=>{
+      state.history[type] = state.history[type].filter(h => !ids.includes(h.id));
+      saveState();
+      renderHistoryModalList();
+      renderHistorySelect(type);
+      toast('削除しました');
+    }
+  });
+});
+document.getElementById('history-delete-all').addEventListener('click', ()=>{
+  const type = historyManagerType;
+  if(!state.history[type].length){ toast('削除する履歴がありません'); return; }
+  showConfirm({
+    title: '履歴をすべて削除しますか？',
+    message: `${HIST_LABELS[type]}の履歴をすべて削除します（${state.history[type].length}件）。この操作は元に戻せません。`,
+    okLabel: 'すべて削除する',
+    danger: true,
+    onOk: ()=>{
+      state.history[type] = [];
+      saveState();
+      renderHistoryModalList();
+      renderHistorySelect(type);
+      toast('すべて削除しました');
+    }
+  });
+});
+
+renderAllHistorySelects();
+
+/* Export / Import（Excel .xlsx 形式。以前のJSONバックアップも読み込み可能） */
+/* ---- 最小限のxlsx書き出し・読み込み（外部ライブラリなし・オフラインで動作） ---- */
+const XB = (function(){
+  const enc = new TextEncoder(), dec = new TextDecoder('utf-8');
+  const crcTable = (()=>{ const t = new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c = (c&1) ? (0xEDB88320 ^ (c>>>1)) : (c>>>1); t[n]=c>>>0; } return t; })();
+  function crc32(u8){ let c = 0xFFFFFFFF; for(let i=0;i<u8.length;i++) c = crcTable[(c ^ u8[i]) & 0xFF] ^ (c>>>8); return (c ^ 0xFFFFFFFF)>>>0; }
+  function zipStore(files){            // files: [{name, data(Uint8Array)}]  ※無圧縮(store)
+    const parts = [], central = []; let offset = 0;
+    files.forEach(f=>{
+      const name = enc.encode(f.name), crc = crc32(f.data), size = f.data.length;
+      const lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true); lh.setUint16(6,0x0800,true); lh.setUint16(8,0,true);
+      lh.setUint16(10,0,true); lh.setUint16(12,0x0021,true); lh.setUint32(14,crc,true);
+      lh.setUint32(18,size,true); lh.setUint32(22,size,true); lh.setUint16(26,name.length,true); lh.setUint16(28,0,true);
+      parts.push(new Uint8Array(lh.buffer), name, f.data);
+      const ch = new DataView(new ArrayBuffer(46));
+      ch.setUint32(0,0x02014b50,true); ch.setUint16(4,20,true); ch.setUint16(6,20,true); ch.setUint16(8,0x0800,true); ch.setUint16(10,0,true);
+      ch.setUint16(12,0,true); ch.setUint16(14,0x0021,true); ch.setUint32(16,crc,true);
+      ch.setUint32(20,size,true); ch.setUint32(24,size,true); ch.setUint16(28,name.length,true);
+      ch.setUint32(42,offset,true);
+      central.push(new Uint8Array(ch.buffer), name);
+      offset += 30 + name.length + size;
+    });
+    let cdSize = 0; central.forEach(p=>cdSize += p.length);
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0,0x06054b50,true); end.setUint16(8,files.length,true); end.setUint16(10,files.length,true);
+    end.setUint32(12,cdSize,true); end.setUint32(16,offset,true);
+    const all = parts.concat(central, [new Uint8Array(end.buffer)]);
+    let total = 0; all.forEach(p=>total += p.length);
+    const out = new Uint8Array(total); let pos = 0; all.forEach(p=>{ out.set(p,pos); pos += p.length; });
+    return out;
+  }
+  async function inflateRaw(u8){
+    if(typeof DecompressionStream === 'undefined') throw new Error('この端末のブラウザではExcelの読み込みに対応していません');
+    const stream = new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+  async function readZip(buf){          // → { 'path': Uint8Array }
+    const u8 = new Uint8Array(buf), dv = new DataView(buf);
+    let eocd = -1;
+    for(let i=u8.length-22; i>=Math.max(0,u8.length-65557); i--){ if(dv.getUint32(i,true) === 0x06054b50){ eocd = i; break; } }
+    if(eocd < 0) throw new Error('Excelファイルとして読み取れません');
+    const n = dv.getUint16(eocd+10,true); let p = dv.getUint32(eocd+16,true);
+    const out = {};
+    for(let i=0;i<n;i++){
+      if(dv.getUint32(p,true) !== 0x02014b50) throw new Error('Excelファイルが壊れています');
+      const method = dv.getUint16(p+10,true), csize = dv.getUint32(p+20,true);
+      const nl = dv.getUint16(p+28,true), el = dv.getUint16(p+30,true), cl = dv.getUint16(p+32,true), lo = dv.getUint32(p+42,true);
+      const name = dec.decode(u8.subarray(p+46, p+46+nl));
+      const lnl = dv.getUint16(lo+26,true), lel = dv.getUint16(lo+28,true);
+      const start = lo + 30 + lnl + lel, raw = u8.subarray(start, start+csize);
+      if(/\.(xml|rels)$/.test(name)){
+        out[name] = method === 0 ? raw : (method === 8 ? await inflateRaw(raw) : null);
+      }
+      p += 46 + nl + el + cl;
+    }
+    return out;
+  }
+  const esc = s => String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'');
+  function colName(i){ let s=''; i++; while(i>0){ const m=(i-1)%26; s=String.fromCharCode(65+m)+s; i=Math.floor((i-1)/26); } return s; }
+  function sheetXml(rows, widths){
+    let x = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';
+    x += '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>';
+    x += '<cols>' + widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('') + '</cols><sheetData>';
+    rows.forEach((row,ri)=>{
+      x += `<row r="${ri+1}">`;
+      row.forEach((v,ci)=>{
+        if(v === null || v === undefined || v === '') return;
+        const ref = colName(ci) + (ri+1), st = ri === 0 ? ' s="1"' : '';
+        if(typeof v === 'number' && isFinite(v)) x += `<c r="${ref}"${st}><v>${v}</v></c>`;
+        else x += `<c r="${ref}"${st} t="inlineStr"><is><t xml:space="preserve">${esc(v)}</t></is></c>`;
+      });
+      x += '</row>';
+    });
+    return x + '</sheetData></worksheet>';
+  }
+  function buildXlsx(sheets){           // sheets: [{name, rows, widths}]
+    const S = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main', R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+    const files = [];
+    const add = (name, text)=>files.push({ name, data: enc.encode(text) });
+    add('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' + sheets.map((s,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('') + '</Types>');
+    add('_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${R}/officeDocument" Target="xl/workbook.xml"/></Relationships>`);
+    add('xl/workbook.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="${S}" xmlns:r="${R}"><sheets>` + sheets.map((s,i)=>`<sheet name="${esc(s.name)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('') + '</sheets></workbook>');
+    add('xl/_rels/workbook.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` + sheets.map((s,i)=>`<Relationship Id="rId${i+1}" Type="${R}/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('') + `<Relationship Id="rId${sheets.length+1}" Type="${R}/styles" Target="styles.xml"/></Relationships>`);
+    add('xl/styles.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="${S}"><fonts count="2"><font><sz val="11"/><name val="Arial"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Arial"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1F4E78"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`);
+    sheets.forEach((s,i)=>add(`xl/worksheets/sheet${i+1}.xml`, sheetXml(s.rows, s.widths)));
+    return zipStore(files);
+  }
+  const xmlDoc = u8 => new DOMParser().parseFromString(dec.decode(u8), 'application/xml');
+  const byTag = (node, tag) => Array.from(node.getElementsByTagNameNS('*', tag));
+  function colIndex(ref){ const m = /^([A-Z]+)/.exec(ref); let n = 0; for(const ch of m[1]) n = n*26 + (ch.charCodeAt(0)-64); return n-1; }
+  async function parseXlsx(buf){        // → { シート名: [[セル値,...], ...] }
+    const z = await readZip(buf);
+    if(!z['xl/workbook.xml']) throw new Error('Excelファイルの形式が正しくありません');
+    const shared = [];
+    if(z['xl/sharedStrings.xml']){
+      byTag(xmlDoc(z['xl/sharedStrings.xml']), 'si').forEach(si=>{
+        shared.push(byTag(si, 't').filter(t=>t.parentNode.localName !== 'rPh').map(t=>t.textContent).join(''));
+      });
+    }
+    const rels = {};
+    byTag(xmlDoc(z['xl/_rels/workbook.xml.rels']), 'Relationship').forEach(r=>{
+      let t = r.getAttribute('Target'); t = t.replace(/^\//,''); if(!t.startsWith('xl/')) t = 'xl/' + t; rels[r.getAttribute('Id')] = t;
+    });
+    const out = {};
+    for(const sh of byTag(xmlDoc(z['xl/workbook.xml']), 'sheet')){
+      const rid = sh.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id') || sh.getAttribute('r:id');
+      const path = rels[rid]; if(!path || !z[path]) continue;
+      const rows = [];
+      byTag(xmlDoc(z[path]), 'row').forEach(row=>{
+        const arr = [];
+        byTag(row, 'c').forEach(c=>{
+          const t = c.getAttribute('t'), vEl = byTag(c, 'v')[0];
+          let val = null;
+          if(t === 'inlineStr') val = byTag(c, 't').filter(x=>x.parentNode.localName !== 'rPh').map(x=>x.textContent).join('');
+          else if(vEl){
+            const raw = vEl.textContent;
+            if(t === 's') val = shared[parseInt(raw,10)];
+            else if(t === 'str' || t === 'e') val = raw;
+            else if(t === 'b') val = raw === '1';
+            else { const num = parseFloat(raw); val = isNaN(num) ? raw : num; }
+          }
+          arr[colIndex(c.getAttribute('r'))] = val;
+        });
+        const rIdx = parseInt(row.getAttribute('r'),10) - 1;
+        rows[isNaN(rIdx) ? rows.length : rIdx] = arr;
+      });
+      out[sh.getAttribute('name')] = Array.from(rows, r => r || []);
+    }
+    return out;
+  }
+  return { buildXlsx, parseXlsx };
+})();
+
+const bkPad = v => String(v).padStart(2,'0');
+function bkFmtDT(ms){
+  if(!isNum(ms)) return '';
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${bkPad(d.getMonth()+1)}-${bkPad(d.getDate())} ${bkPad(d.getHours())}:${bkPad(d.getMinutes())}:${bkPad(d.getSeconds())}`;
+}
+const bkNum = v => { if(v === null || v === undefined || v === '') return null; const n = typeof v === 'number' ? v : parseFloat(v); return isNaN(n) ? null : n; };
+const bkStr = v => (v === null || v === undefined) ? '' : String(v);
+const bkTime = v => { if(isNum(v)) return v; const t = new Date(bkStr(v).replace(' ','T')).getTime(); return isNaN(t) ? null : t; };
+
+/* バックアップに含めるのは「集合場所」「遠征先」の履歴のみ（参加者の個人情報・設定は含めない） */
+function buildBackupXlsx(){
+  const histRows = type => {
+    const rows = [['ID','名称','緯度','経度','備考（住所・区分）','日付','登録日時']];
+    state.history[type].forEach(h=>rows.push([h.id, h.label || '', isNum(h.lat) ? h.lat : '', isNum(h.lng) ? h.lng : '', h.note || '', h.date || '', bkFmtDT(h.savedAt)]));
+    return rows;
+  };
+  return XB.buildXlsx([
+    { name:'集合場所', rows:histRows('meet'), widths:[12,36,16,16,38,12,20] },
+    { name:'遠征先', rows:histRows('exp'), widths:[12,36,16,16,38,12,20] },
+  ]);
+}
+
+/* 読み込み：集合場所・遠征先の履歴だけを取り出す（ファイルに参加者が入っていても読み込まない） */
+async function parseBackupFile(buf){
+  const u8 = new Uint8Array(buf);
+  const norm = (list) => (Array.isArray(list) ? list : []).filter(h=>h && bkStr(h.label).trim() !== '').map(h=>({
+    id: bkStr(h.id).trim() || uid(), label: bkStr(h.label).trim(), lat: bkNum(h.lat), lng: bkNum(h.lng),
+    note: bkStr(h.note), date: bkStr(h.date), savedAt: bkTime(h.savedAt) || Date.now()
+  }));
+  if(!(u8[0] === 0x50 && u8[1] === 0x4B)){            // Excelでなければ、従来のJSONバックアップとして読む
+    const data = JSON.parse(new TextDecoder('utf-8').decode(u8));
+    if(!data.history || (!Array.isArray(data.history.meet) && !Array.isArray(data.history.exp))) throw new Error('集合場所・遠征先のデータが見つかりません');
+    return { meet: Array.isArray(data.history.meet) ? norm(data.history.meet) : null, exp: Array.isArray(data.history.exp) ? norm(data.history.exp) : null };
+  }
+  const book = await XB.parseXlsx(buf);
+  const sheetOf = (...names) => { for(const n of names){ if(book[n]) return book[n]; } return null; };
+  const meetRows = sheetOf('集合場所', '集合場所履歴'), expRows = sheetOf('遠征先', '遠征先履歴');
+  if(!meetRows && !expRows) throw new Error('このアプリで書き出したExcelファイルを選んでください');
+  const fromRows = rows => norm(rows.slice(1).map(r=>({ id:r[0], label:r[1], lat:r[2], lng:r[3], note:r[4], date:r[5], savedAt:r[6] })));
+  return { meet: meetRows ? fromRows(meetRows) : null, exp: expRows ? fromRows(expRows) : null };
+}
+
+document.getElementById('btn-export').addEventListener('click', ()=>{
+  try{
+    const blob = new Blob([buildBackupXlsx()], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url = URL.createObjectURL(blob);
+    const a = document.getElementById('filelink');
+    a.href = url;
+    const d = new Date();
+    const ts = d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+    a.download = `直行直帰判定ツール_バックアップ_${ts}.xlsx`;
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+    toast('集合場所・遠征先のバックアップ（Excel）を書き出しました');
+  }catch(err){
+    toast('書き出しに失敗しました: ' + err.message);
+  }
+});
+document.getElementById('btn-import').addEventListener('click', ()=>{
+  document.getElementById('file-import').click();
+});
+document.getElementById('file-import').addEventListener('change', (e)=>{
+  const input = e.target, file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async ()=>{
+    let data;
+    try{
+      data = await parseBackupFile(reader.result);
+    }catch(err){
+      toast('読み込みに失敗しました: ' + err.message);
+      return;
+    }
+    const nMeet = data.meet ? data.meet.length : null, nExp = data.exp ? data.exp.length : null;
+    const parts = [];
+    if(nMeet !== null) parts.push(`集合場所 ${nMeet}件`);
+    if(nExp !== null) parts.push(`遠征先 ${nExp}件`);
+    showConfirm({
+      title:'集合場所・遠征先を読み込みますか？',
+      message:`現在の履歴を、選んだファイルの内容（${parts.join('、')}）で置き換えます。参加者・判定の設定は変わりません。よろしいですか？\n（この操作も「元に戻す」で取り消せます）`,
+      okLabel:'読み込む',
+      danger:true,
+      onOk: ()=>{
+        pushUndo();
+        if(data.meet) state.history.meet = data.meet;
+        if(data.exp) state.history.exp = data.exp;
+        ['meet','exp'].forEach(t=>{
+          const id = state.settings[t + 'HistId'];
+          if(id && !state.history[t].some(h=>h.id === id)) state.settings[t + 'HistId'] = null;
+        });
+        saveState();
+        fillSettingsForm();
+        toast('集合場所・遠征先を読み込みました');
+      }
+    });
+  };
+  reader.readAsArrayBuffer(file);
+  input.value = '';
+});
+
+/* Reset to default */
+document.getElementById('btn-reset').addEventListener('click', ()=>{
+  showConfirm({
+    title:'初期設定に戻しますか？',
+    message:'設定・参加者・判定結果が、すべて工場出荷時の内容に置き換わります。この操作も「元に戻す」で取り消せます。',
+    okLabel:'初期設定に戻す',
+    danger:true,
+    onOk: ()=>{
+      pushUndo();
+      const fresh = JSON.parse(JSON.stringify(DEFAULT_DATA));
+      fresh.members.forEach(m=>{ m.id = uid(); m.deleted = false; });
+      state.settings = fresh.settings;
+      state.members = fresh.members;
+      state.results = null;
+      saveState();
+      fillSettingsForm();
+      renderMembers();
+      renderResults();
+      toast('初期設定に戻しました');
+    }
+  });
+});
+
+/* ---------------- Members ---------------- */
+function isNum(v){ return typeof v === 'number' && !isNaN(v); }
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function attachDeleteHandler(card, m){
+  card.querySelector('[data-action="del"]').addEventListener('click', ()=>{
+    showConfirm({
+      title:'参加者を削除しますか？',
+      message:`「${m.name || '(名前未入力)'}」を参加者一覧から削除します。データは「削除履歴」に残るので、後からいつでも復元できます。`,
+      okLabel:'削除する',
+      danger:true,
+      onOk: ()=>{
+        pushUndo();
+        m.deleted = true;
+        m.deletedAt = Date.now();
+        saveState();
+        renderMembers();
+        toast('削除しました（削除履歴から復元できます）');
+      }
+    });
+  });
+}
+
+/* シンプルカード（「場所・参加者」タブ）：氏名表示・参加ON/OFF・削除のみ。住所・緯度経度は表示しない（内部データとしては保持） */
+function buildMemberCardSimple(m){
+  const card = document.createElement('div');
+  card.className = 'member-card' + (m.active ? '' : ' off');
+  card.innerHTML = `
+    <div class="member-top" style="margin-bottom:0;">
+      <span class="name-display">${escapeHtml(m.name || '(名前未入力)')}</span>
+      <label class="switch">
+        <input type="checkbox" data-field="active" ${m.active ? 'checked' : ''}>
+        <span class="track"></span><span class="thumb"></span>
+      </label>
+      <button class="del-btn" data-action="del" type="button">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M6 7h12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  `;
+  const activeInput = card.querySelector('[data-field="active"]');
+  activeInput.addEventListener('focus', ()=>pushUndo());
+  activeInput.addEventListener('change', ()=>{
+    m.active = activeInput.checked;
+    card.classList.toggle('off', !m.active);
+    saveState();
+    updateMemberCount();
+  });
+  attachDeleteHandler(card, m);
+  return card;
+}
+
+function fmtDate(ts){
+  const d = new Date(ts);
+  return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+function updateMemberCount(){
+  const list = state.members.filter(m => !m.deleted);
+  const joined = list.filter(m => m.active).length;
+  document.getElementById('member-count').innerHTML =
+    `参加 <b class="num">${joined}</b> / ${list.length}人`;
+}
+function renderMembersSimpleOnly(){
+  const list = document.getElementById('member-list-simple');
+  const active = state.members.filter(m => !m.deleted);
+  list.innerHTML = '';
+  if(active.length === 0){
+    list.innerHTML = `<div class="empty">まだ参加者がいません<br>「参加者の追加」（設定タブ）から登録してください</div>`;
+  } else {
+    active.forEach(m => list.appendChild(buildMemberCardSimple(m)));
+  }
+  updateMemberCount();
+}
+function renderMembers(){
+  renderMembersSimpleOnly();
+  const deleted = state.members.filter(m => m.deleted);
+
+  document.getElementById('history-count').textContent = deleted.length;
+  const histList = document.getElementById('history-list');
+  if(deleted.length === 0){
+    histList.innerHTML = `<p style="color:var(--text-faint); margin:6px 0 0;">削除した参加者はいません。</p>`;
+  } else {
+    histList.innerHTML = deleted
+      .slice()
+      .sort((a,b)=>(b.deletedAt||0) - (a.deletedAt||0))
+      .map(m => `
+        <div class="history-item" data-id="${m.id}">
+          <div>
+            <div class="hi-name">${escapeHtml(m.name || '(名前未入力)')}</div>
+            <div class="hi-date">${m.deletedAt ? fmtDate(m.deletedAt) + ' に削除' : ''}</div>
+          </div>
+          <div class="hi-actions">
+            <button class="link-btn" data-action="purge" data-id="${m.id}" type="button">完全に削除</button>
+            <button class="restore-btn" data-action="restore" data-id="${m.id}" type="button">復元する</button>
+          </div>
+        </div>
+      `).join('');
+    histList.querySelectorAll('[data-action="restore"]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const target = state.members.find(x => x.id === btn.dataset.id);
+        if(!target) return;
+        pushUndo();
+        target.deleted = false;
+        delete target.deletedAt;
+        saveState();
+        renderMembers();
+        toast(`「${target.name || '(名前未入力)'}」を復元しました`);
+      });
+    });
+    histList.querySelectorAll('[data-action="purge"]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const target = state.members.find(x => x.id === btn.dataset.id);
+        if(!target) return;
+        showConfirm({
+          title:'完全に削除しますか？',
+          message:`「${target.name || '(名前未入力)'}」のデータを完全に削除します。この操作の後は復元できません（「元に戻す」ボタンでのみ取り消せます）。`,
+          okLabel:'完全に削除する',
+          danger:true,
+          onOk: ()=>{
+            pushUndo();
+            state.members = state.members.filter(x => x.id !== target.id);
+            saveState();
+            renderMembers();
+            toast('完全に削除しました');
+          }
+        });
+      });
+    });
+  }
+}
+/* ---------------- 参加者の追加（設定タブ）：記入例プレースホルダー付きの単一入力フォーム ---------------- */
+let memberDraft = { name:'', addr:'', lat:'', lng:'' };
+function draftMapLink(d){
+  return mapSearchUrl(d.addr, d.lat === '' ? null : parseFloat(d.lat), d.lng === '' ? null : parseFloat(d.lng));
+}
+function renderMemberDrafts(){
+  const container = document.getElementById('member-draft-list');
+  const d = memberDraft;
+  container.innerHTML = `
+    <div class="member-card">
+      <div class="field">
+        <label>氏名</label>
+        <input type="text" data-draft-field="name" placeholder="例）山田太郎" value="${escapeHtml(d.name)}">
+      </div>
+      <div class="row3">
+        <div class="field" style="grid-column:1 / span 2;">
+          <label>住所（任意・地図検索用）</label>
+          <input type="text" data-draft-field="addr" placeholder="例）愛知県〇〇市…" value="${escapeHtml(d.addr)}">
+        </div>
+        <div class="field">
+          <a class="maplink" data-draft-maplink href="${draftMapLink(d)}" target="_blank" rel="noopener" style="margin-top:26px;">地図で調べる</a>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>緯度<span class="req">*</span></label>
+          <input type="number" step="any" class="num" data-draft-field="lat" placeholder="35.1234" value="${d.lat}">
+        </div>
+        <div class="field">
+          <label>経度<span class="req">*</span></label>
+          <input type="number" step="any" class="num" data-draft-field="lng" placeholder="137.1234" value="${d.lng}">
+        </div>
+      </div>
+    </div>
+  `;
+  container.querySelectorAll('[data-draft-field]').forEach(el=>{
+    const field = el.dataset.draftField;
+    el.addEventListener('input', ()=>{
+      memberDraft[field] = el.value;
+      if(field === 'addr' || field === 'lat' || field === 'lng'){
+        container.querySelector('[data-draft-maplink]').href = draftMapLink(memberDraft);
+      }
+    });
+  });
+}
+document.getElementById('btn-member-draft-submit').addEventListener('click', ()=>{
+  const d = memberDraft;
+  const name = (d.name || '').trim();
+  if(!name){ toast('氏名を入力してください'); return; }
+  pushUndo();
+  state.members.push({
+    id: uid(),
+    name,
+    addr: d.addr || '',
+    lat: d.lat === '' ? null : parseFloat(d.lat),
+    lng: d.lng === '' ? null : parseFloat(d.lng),
+    active: true,
+    deleted: false
+  });
+  saveState();
+  renderMembers();
+  memberDraft = { name:'', addr:'', lat:'', lng:'' };
+  renderMemberDrafts();
+  toast(`「${name}」を参加者に登録しました`);
+});
+renderMemberDrafts();
+renderMembers();
+
+/* 参加者一覧の開閉（初期は閉じた状態） */
+const memberToggleBtn = document.getElementById('btn-member-toggle');
+const memberPanel = document.getElementById('member-panel');
+function setMemberPanel(open){
+  memberPanel.hidden = !open;
+  memberToggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  document.getElementById('member-toggle-label').textContent = open ? '閉じる' : '一覧から選択';
+}
+memberToggleBtn.addEventListener('click', ()=>setMemberPanel(memberPanel.hidden));
+setMemberPanel(false);
+
+/* ---------------- Routing (OSRM) & judgement logic ---------------- */
+const OSRM_BASE = 'https://router.project-osrm.org/route/v1/driving/';
+
+function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
+
+function routeProvider(){ return (state.settings && state.settings.provider === 'google') ? 'google' : 'osrm'; }
+
+/* 通信エラー・混雑(429)・サーバー側の一時エラー(5xx)は、間を空けて最大3回まで再試行する。それ以外のHTTPエラーは呼び出し側で処理する */
+async function fetchRetry(doFetch){
+  let lastErr = null;
+  for(let attempt = 1; attempt <= 3; attempt++){
+    let res;
+    try{
+      res = await doFetch();
+    }catch(e){
+      lastErr = new Error('地図サービスに接続できませんでした（' + e.message + '）');
+      if(attempt < 3) await sleep(1500 * attempt);
+      continue;
+    }
+    if(res.ok) return res;
+    if(res.status === 429 || res.status >= 500){
+      lastErr = new Error(`HTTPステータス ${res.status}`);
+      if(attempt < 3) await sleep(1500 * attempt);
+      continue;
+    }
+    return res;
+  }
+  throw lastErr || new Error('地図サービスに接続できませんでした');
+}
+
+async function getRouteOSRM(lat1, lng1, lat2, lng2){
+  const url = `${OSRM_BASE}${lng1},${lat1};${lng2},${lat2}?overview=false`;
+  const res = await fetchRetry(() => fetch(url));
+  if(!res.ok) throw new Error(`HTTPステータス ${res.status}`);
+  const data = await res.json();
+  if(data.code !== 'Ok' || !data.routes || !data.routes.length){
+    throw new Error('ルートが見つかりませんでした（' + (data.code || '不明') + '）');
+  }
+  const route = data.routes[0];
+  return { km: route.distance / 1000, min: route.duration / 60 };
+}
+
+/* ---- Google Routes API ---- */
+function gKeyGet(){ try{ return (localStorage.getItem(G_KEY_LS) || '').trim(); }catch(e){ return ''; } }
+function gKeySet(v){ try{ v = (v || '').trim(); if(v) localStorage.setItem(G_KEY_LS, v); else localStorage.removeItem(G_KEY_LS); }catch(e){} }
+function gYm(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+function gUsageGet(){
+  try{ const o = JSON.parse(localStorage.getItem(G_USE_LS) || 'null'); if(o && o.ym === gYm() && Number.isFinite(o.n)) return o; }catch(e){}
+  return { ym: gYm(), n: 0 };
+}
+function gUsageAdd(k){
+  const o = gUsageGet(); o.n += k;
+  try{ localStorage.setItem(G_USE_LS, JSON.stringify(o)); }catch(e){}
+  gRenderUsage();
+}
+function gRenderUsage(){
+  const el = document.getElementById('g-usage');
+  if(el) el.textContent = `今月のGoogle取得回数（この端末の目安）：${gUsageGet().n.toLocaleString()} / ${G_FREE_CAP.toLocaleString()}件（無料枠）`;
+}
+function gDepartureIso(){
+  const v = state.settings && state.settings.departAt;
+  if(!v) return null;
+  const d = new Date(v);   // datetime-local は端末の時刻として解釈される
+  if(isNaN(d.getTime()) || d.getTime() <= Date.now() + 60000) return null;   // 過去は無視（現在時刻で計算）
+  return d.toISOString();
+}
+async function getRouteGoogle(lat1, lng1, lat2, lng2){
+  const key = gKeyGet();
+  if(!key) throw new Error('Google APIキーが未入力です（「設定」タブの「距離・時間の取得元」で入力してください）');
+  const st = state.settings || {};
+  const body = {
+    origin:      { location: { latLng: { latitude: lat1, longitude: lng1 } } },
+    destination: { location: { latLng: { latitude: lat2, longitude: lng2 } } },
+    travelMode: 'DRIVE',
+    routingPreference: 'TRAFFIC_AWARE'
+  };
+  const dep = gDepartureIso();
+  if(dep) body.departureTime = dep;
+  const mods = {};
+  if(st.avoidHighways) mods.avoidHighways = true;
+  if(st.avoidTolls) mods.avoidTolls = true;
+  if(Object.keys(mods).length) body.routeModifiers = mods;
+
+  const res = await fetchRetry(() => fetch(G_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': key,
+      'X-Goog-FieldMask': 'routes.distanceMeters,routes.duration'
+    },
+    body: JSON.stringify(body)
+  }));
+  let data = null;
+  try{ data = await res.json(); }catch(e){}
+  if(!res.ok){
+    const gmsg = (data && data.error && data.error.message) ? data.error.message : '';
+    const hint = res.status === 400 ? 'キーまたは入力内容が正しくありません'
+      : res.status === 403 ? 'キーが無効、Routes APIが有効でない、またはキーの制限が合っていません'
+      : res.status === 429 ? '利用上限に達しています（しばらくしてから再試行してください）'
+      : '取得に失敗しました';
+    throw new Error(`Google Routes API エラー（${res.status}）：${hint}${gmsg ? '［' + gmsg + '］' : ''}`);
+  }
+  if(!data || !data.routes || !data.routes.length) throw new Error('ルートが見つかりませんでした（Google）');
+  const r = data.routes[0];
+  const sec = parseFloat(String(r.duration || '0').replace('s', ''));
+  gUsageAdd(1);
+  return { km: (r.distanceMeters || 0) / 1000, min: (isFinite(sec) ? sec : 0) / 60 };
+}
+
+/* 取得元に応じて距離・時間を返す（OSRMのときだけ「時間の補正倍率」を掛ける） */
+async function getRoute(lat1, lng1, lat2, lng2){
+  if(routeProvider() === 'google') return getRouteGoogle(lat1, lng1, lat2, lng2);
+  const r = await getRouteOSRM(lat1, lng1, lat2, lng2);
+  const f = (state.settings && Number.isFinite(state.settings.timeFactor) && state.settings.timeFactor > 0) ? state.settings.timeFactor : 1;
+  return { km: r.km, min: r.min * f };
+}
+
+function calcBearing(lat1, lon1, lat2, lon2){
+  const toRad = d => d * Math.PI / 180;
+  const phi1 = toRad(lat1), phi2 = toRad(lat2), dLon = toRad(lon2 - lon1);
+  const y = Math.sin(dLon) * Math.cos(phi2);
+  const x = Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(phi2) * Math.cos(dLon);
+  let brng = Math.atan2(y, x) * 180 / Math.PI;
+  return (brng + 360) % 360;
+}
+function angleDiff180(a, b){
+  const d = Math.abs(a - b);
+  return d > 180 ? 360 - d : d;
+}
+
+function setStatus(msg, spinning){
+  const el = document.getElementById('status-banner');
+  el.style.display = msg ? 'flex' : 'none';
+  el.innerHTML = (spinning ? '<div class="spinner"></div>' : '') + `<span>${escapeHtml(msg||'')}</span>`;
+}
+
+async function runJudgement(){
+  const s = state.settings;
+  if(!isNum(s.meetLat) || !isNum(s.meetLng)){
+    toast('「場所・参加者」タブで集合場所を履歴から選択してください');
+    return;
+  }
+  if(!isNum(s.expLat) || !isNum(s.expLng)){
+    toast('「場所・参加者」タブで遠征先を入力するか、履歴から選択してください');
+    return;
+  }
+  const useD = s.useDist !== false, useT = s.useTime !== false, useA = s.useAngle !== false;
+  const need = Math.min([1,2,3].includes(s.needCount) ? s.needCount : 2, enabledCount(s));   // 「直行」に必要な該当項目数
+  const participants = state.members.filter(m => !m.deleted && m.active && m.name && m.name.trim());
+  if(participants.length === 0){
+    toast('「場所・参加者」タブで参加メンバーをONにしてください');
+    return;
+  }
+  const missing = participants.filter(m => !isNum(m.lat) || !isNum(m.lng));
+  if(missing.length > 0){
+    toast('緯度・経度が未入力の参加者がいます（「設定」タブの参加者の追加で登録し直してください）: ' + missing.map(m=>m.name).join('、'));
+    return;
+  }
+
+  const prov = routeProvider();
+  if(prov === 'google'){
+    if(!gKeyGet()){ toast('Google APIキーが未入力です（「設定」タブの「距離・時間の取得元」）'); return; }
+    const needReq = 1 + participants.length * 2;
+    if(gUsageGet().n + needReq > G_FREE_CAP && !confirm(`今回は${needReq}件のGoogle取得が必要です。今月の取得回数（この端末の目安）が無料枠${G_FREE_CAP.toLocaleString()}件を超える可能性があります。続けますか？`)) return;
+  }
+  const rdelay = prov === 'google' ? 100 : 300;
+  const runBtn = document.getElementById('btn-run');
+  runBtn.disabled = true;
+  document.getElementById('result-summary').innerHTML = '';
+  document.getElementById('export-row').style.display = 'none';
+  document.getElementById('result-list').innerHTML = '';
+
+  try{
+    setStatus('集合場所→遠征先の距離・時間を取得中...', true);
+    const base = await getRoute(s.meetLat, s.meetLng, s.expLat, s.expLng);
+    await sleep(rdelay);
+
+    const results = [];
+    for(let i=0; i<participants.length; i++){
+      const m = participants[i];
+      setStatus(`取得中: ${m.name} (${i+1} / ${participants.length})`, true);
+      try{
+        const r1 = await getRoute(m.lat, m.lng, s.meetLat, s.meetLng);
+        await sleep(rdelay);
+        const r2 = await getRoute(m.lat, m.lng, s.expLat, s.expLng);
+        await sleep(rdelay);
+
+        const bearMeet = calcBearing(m.lat, m.lng, s.meetLat, s.meetLng);
+        const bearExp = calcBearing(m.lat, m.lng, s.expLat, s.expLng);
+
+        const meetKm = r1.km + base.km;
+        const expKm = r2.km;
+        const diffKm = meetKm - expKm;
+        const meetMin = r1.min + base.min;
+        const expMin = r2.min;
+        const diffMin = meetMin - expMin;
+        const angle = angleDiff180(bearMeet, bearExp);
+
+        const distEval = !useD ? '対象外' : (((diffKm >= s.distTh) || (expKm > 0 && s.distRatio && (meetKm/expKm) >= s.distRatio)) ? '直行' : '集合経由');
+        const timeEval = !useT ? '対象外' : (((diffMin >= s.timeTh) || (expMin > 0 && s.timeRatio && (meetMin/expMin) >= s.timeRatio)) ? '直行' : '集合経由');
+        const angleEval = !useA ? '対象外' : (angle >= s.angleTh ? '直行' : '集合経由');
+        const cnt = [distEval, timeEval, angleEval].filter(v => v === '直行').length;
+        const overall = cnt >= need ? '直行' : '集合経由';
+        const reason = [`距離:${distEval}${useD ? `(${diffKm.toFixed(1)}km)` : ''}`, `時間:${timeEval}${useT ? `(${Math.round(diffMin)}分)` : ''}`, `角度:${angleEval}${useA ? `(${Math.round(angle)}°)` : ''}`].join(' / ');
+
+        results.push({ name:m.name, ok:true, meetKm, expKm, diffKm, meetMin, expMin, diffMin, angle, distEval, timeEval, angleEval, overall, reason });
+      }catch(err){
+        results.push({ name:m.name, ok:false, error: err.message });
+      }
+    }
+
+    // 台数判定（直行のみ、短縮距離が大きい順に順位付け）
+    const directOnes = results.filter(r => r.ok && r.overall === '直行');
+    directOnes.sort((a,b) => b.diffKm - a.diffKm);
+    directOnes.forEach((r, idx) => {
+      r.rank = idx + 1;
+      const max = s.maxCount;
+      if(!max || max <= 0){
+        r.countJudge = '対象内';
+      } else if(r.rank <= max){
+        r.countJudge = `対象内(${r.rank}/${max})`;
+      } else {
+        r.countJudge = '台数オーバー';
+      }
+    });
+
+    state.results = {
+      generatedAt: Date.now(), items: results,
+      base: { km: base.km, min: base.min },
+      params: {
+        meetAddr: s.meetAddr, expAddr: s.expAddr,
+        matchDate: s.matchDate || rpTodayStr(), opponent: (s.opponent || '').trim(),
+        distTh: s.distTh, timeTh: s.timeTh, angleTh: s.angleTh,
+        distRatio: s.distRatio, timeRatio: s.timeRatio, timeFactor: s.timeFactor, useDist: useD, useTime: useT, useAngle: useA, needCount: need, maxCount: s.maxCount, provider: prov
+      }
+    };
+    saveState();
+    setStatus('', false);
+    renderResults();
+    toast('判定が完了しました');
+  }catch(err){
+    setStatus('エラー: ' + err.message + '　（通信環境や「場所・参加者」タブの選択状況をご確認のうえ、もう一度お試しください）', false);
+    toast('エラー: ' + err.message);
+  }finally{
+    runBtn.disabled = false;
+  }
+}
+document.getElementById('btn-run').addEventListener('click', runJudgement);
+
+const evCls = ev => ev === '直行' ? 'go' : (ev === '対象外' ? 'off' : 'stop');
+function renderResults(){
+  const summaryEl = document.getElementById('result-summary');
+  const listEl = document.getElementById('result-list');
+  const data = state.results;
+  if(!data || !data.items || data.items.length === 0){
+    summaryEl.innerHTML = '';
+    document.getElementById('export-row').style.display = 'none';
+    listEl.innerHTML = `<div class="empty">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M4 20V10m6.5 10V4m6.5 16v-7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><br>
+      まだ判定結果がありません<br>「判定を実行する」を押してください
+    </div>`;
+    return;
+  }
+  document.getElementById('export-row').style.display = 'grid';
+  const items = data.items;
+  const goCount = items.filter(r=>r.ok && r.overall === '直行').length;
+  const stopCount = items.filter(r=>r.ok && r.overall === '集合経由').length;
+  const errCount = items.filter(r=>!r.ok).length;
+  const dt = new Date(data.generatedAt);
+  const dtStr = `${dt.getMonth()+1}/${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+
+  summaryEl.innerHTML = `
+    <div class="status-banner" style="display:flex;">
+      <span>${dtStr} 実行　直行 <b style="color:var(--go)">${goCount}</b>人 / 集合経由 ${stopCount}人${errCount ? ` / 取得失敗 ${errCount}人` : ''}</span>
+    </div>`;
+
+  listEl.innerHTML = items.map(r=>{
+    if(!r.ok){
+      return `<div class="result-card">
+        <div class="result-head"><span class="name">${escapeHtml(r.name)}</span><span class="badge err">取得失敗</span></div>
+        <div class="reason">${escapeHtml(r.error)}</div>
+      </div>`;
+    }
+    const countTag = r.countJudge ? `<div class="count-tag ${r.countJudge.includes('オーバー') ? 'over' : 'ok'}">${escapeHtml(r.countJudge)}</div>` : '';
+    return `<div class="result-card">
+      <div class="result-head">
+        <span class="name">${escapeHtml(r.name)}</span>
+        <span class="badge ${r.overall === '直行' ? 'go' : 'stop'}">${r.overall}</span>
+      </div>
+      <div class="metrics">
+        <div class="metric"><div class="lbl">距離短縮</div><div class="val num ${evCls(r.distEval)}">${r.diffKm.toFixed(1)}km</div></div>
+        <div class="metric"><div class="lbl">時間短縮</div><div class="val num ${evCls(r.timeEval)}">${Math.round(r.diffMin)}分</div></div>
+        <div class="metric"><div class="lbl">角度差</div><div class="val num ${evCls(r.angleEval)}">${Math.round(r.angle)}°</div></div>
+      </div>
+      <div class="reason">${escapeHtml(r.reason)}</div>
+      ${countTag}
+    </div>`;
+  }).join('');
+}
+renderResults();
+
+/* ============================================================
+   判定結果一覧表の出力（A4横・画像PNG / PDF）
+   Canvasに直接描画するので、外部ライブラリ不要・オフラインでも動作します
+============================================================ */
+const RP_W = 2480, RP_H = 1754, RP_M = 80;          // A4横 約210dpi
+const RP_FONT = '"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic","Meiryo",sans-serif';
+const RP_C = {
+  ink:'#1b2a41', sub:'#5b6b82', line:'#d5dde8', lineStrong:'#9fb0c6', head2:'#e9eef5',
+  accent:'#d97b1d', zebra:'#f6f8fb',
+  goBg:'#dff3e7', goTx:'#126b38', goSolid:'#1f9d55',
+  stopBg:'#fdeedd', stopTx:'#a1540a',
+  errBg:'#fde8e8', errTx:'#b3261e'
+};
+const RP_COLS_ALL = [
+  {id:'no', w:70},  {id:'name', w:230},
+  {id:'mk', w:150}, {id:'ek', w:150}, {id:'dk', w:150}, {id:'de', w:140},
+  {id:'mm', w:150}, {id:'em', w:150}, {id:'dm', w:150}, {id:'te', w:140},
+  {id:'an', w:140}, {id:'ae', w:140},
+  {id:'ov', w:190}, {id:'cj', w:370}
+];
+const RP_TABLE_W_FULL = RP_COLS_ALL.reduce((a,c)=>a+c.w, 0);   // 2320
+let RP_COLS = [], RP_TABLE_W = RP_TABLE_W_FULL;
+/* 判定に使わない項目（距離・時間・角度）の列を取り除いて、列の位置と幅を組み直す */
+function rpSetLayout(p){
+  const u = rpUse(p);
+  const hide = new Set();
+  if(!u.dist)  ['mk','ek','dk','de'].forEach(i => hide.add(i));
+  if(!u.time)  ['mm','em','dm','te'].forEach(i => hide.add(i));
+  if(!u.angle) ['an','ae'].forEach(i => hide.add(i));
+  const cols = RP_COLS_ALL.filter(c => !hide.has(c.id)).map(c => ({ id:c.id, w:c.w }));
+  const rest = cols.filter(c => c.id !== 'no');
+  const k = (RP_TABLE_W_FULL - 70) / rest.reduce((a,c) => a + c.w, 0);
+  rest.forEach(c => { c.w = Math.round(c.w * k); });
+  cols[cols.length - 1].w += RP_TABLE_W_FULL - cols.reduce((a,c) => a + c.w, 0);   // 端数を最後の列で調整
+  let x = RP_M; cols.forEach(c => { c.x = x; x += c.w; });
+  RP_COLS = cols; RP_TABLE_W = RP_TABLE_W_FULL;
+}
+const RP_HEAD_H1 = 48, RP_HEAD_H2 = 66, RP_HEAD_H = RP_HEAD_H1 + RP_HEAD_H2;
+const RP_FIRST_ROWS_TOP = 346 + RP_HEAD_H;            // 1ページ目：表の見出しの下
+const RP_NEXT_HEAD_Y = 190;                           // 2ページ目以降：表の見出しの位置
+
+function rpFont(w, size){ return `${w} ${size}px ${RP_FONT}`; }
+function rpRound(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r, y); ctx.arcTo(x+w, y, x+w, y+h, r); ctx.arcTo(x+w, y+h, x, y+h, r);
+  ctx.arcTo(x, y+h, x, y, r); ctx.arcTo(x, y, x+w, y, r); ctx.closePath();
+}
+/* 幅に収まるまで文字サイズを小さくし、それでも入らなければ「…」で省略（途中で改行しない） */
+function rpFit(ctx, text, maxW, size, minSize, weight){
+  let s = size;
+  ctx.font = rpFont(weight, s);
+  while(ctx.measureText(text).width > maxW && s > minSize){ s -= 1; ctx.font = rpFont(weight, s); }
+  if(ctx.measureText(text).width > maxW){
+    let t = text;
+    while(t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+    return t + '…';
+  }
+  return text;
+}
+/* 文章の折り返し：数字+単位（150° / 30km など）は分割せず、句読点・閉じ括弧が行頭に来ないようにする */
+function rpWrap(ctx, text, maxW){
+  const NO_HEAD = '。、，．）」』】・％%°！？';
+  const NO_TAIL = '「『（【';
+  const lines = [];
+  text.split('\n').forEach(par => {
+    const startIdx = lines.length;
+    const tokens = par.match(/[0-9A-Za-z.,%°≧≦÷×=\/−\-]+|[\s\S]/g) || [''];
+    let cur = '';
+    tokens.forEach(tk => {
+      if(cur !== '' && ctx.measureText(cur + tk).width > maxW){
+        if(NO_HEAD.includes(tk[0])){
+          // 行頭に来てはいけない文字：少しだけ行末にはみ出して収める。それでも入らなければ直前の1文字ごと次の行へ
+          if(ctx.measureText(cur + tk).width <= maxW + 56){ cur += tk; }
+          else { const last = cur.slice(-1); lines.push(cur.slice(0, -1)); cur = last + tk; }
+        } else {
+          let carry = '';
+          if(NO_TAIL.includes(cur[cur.length-1])){ carry = cur[cur.length-1]; cur = cur.slice(0, -1); }
+          lines.push(cur);
+          cur = carry + tk;
+        }
+      } else {
+        cur += tk;
+      }
+    });
+    lines.push(cur);
+    // 最終行が短すぎる（句読点を除いて2文字以下）場合は、前の行の末尾を送って3文字以上にする
+    let guard = 0;
+    for(let i = lines.length - 1; i > startIdx && guard < 4; guard++){
+      const bare = lines[i].replace(/[。、」』）]/g, '');
+      if(bare.length >= 3) break;
+      const prev = lines[i-1];
+      if(prev.length <= 6) break;
+      lines[i] = prev.slice(-1) + lines[i];
+      lines[i-1] = prev.slice(0, -1);
+    }
+  });
+  return lines;
+}
+
+function rpUse(p){ return { dist:p.useDist !== false, time:p.useTime !== false, angle:p.useAngle !== false }; }
+function rpEnabled(p){ const u = rpUse(p); return (u.dist?1:0) + (u.time?1:0) + (u.angle?1:0); }
+function rpNeed(p){ return Math.min([1,2,3].includes(p.needCount) ? p.needCount : 2, rpEnabled(p)); }
+function rpNeedLabel(p){
+  const n = rpNeed(p), en = rpEnabled(p), u = rpUse(p);
+  const names = [u.dist && '距離', u.time && '時間', u.angle && '角度'].filter(Boolean).join('・');
+  return `使用する項目（${names}）のうち、` + (n >= en ? (en === 1 ? 'その項目' : 'すべて') : `${n}項目以上`);
+}
+function rpLogicCards(p){
+  const maxTxt = (!p.maxCount || p.maxCount <= 0)
+    ? '台数の上限は設定されていません（直行の人はすべて「対象内」）。'
+    : `直行の人は距離の短縮量が大きい順に、上限${p.maxCount}台までを「対象内」、それを超えた分を「台数オーバー」とします。`;
+  const u = rpUse(p);
+  const cards = [
+    { use:u.dist, title:'距離評価',
+      body:`集合経由の距離から直行の距離を引いた差（短縮量）が ${p.distTh}km 以上なら「直行」。` +
+           (p.distRatio ? `\nまたは、集合経由の距離が直行の ${p.distRatio}倍以上でも「直行」。` : '') +
+           `\n当てはまらなければ「集合経由」。` },
+    { use:u.time, title:'時間評価',
+      body:`集合経由の時間から直行の時間を引いた差（短縮量）が ${p.timeTh}分 以上なら「直行」。` +
+           (p.timeRatio ? `\nまたは、集合経由の時間が直行の ${p.timeRatio}倍以上でも「直行」。` : '') +
+           `\n当てはまらなければ「集合経由」。` },
+    { use:u.angle, title:'角度評価',
+      body:`自宅から見た「集合場所の方向」と「遠征先の方向」の差（0〜180°）が ${p.angleTh}° 以上なら「直行」。` +
+           `\n差が大きいほど、集合場所は遠征先と逆方向にあり、寄り道が大きいことを表します。` },
+    { use:true, title:'総合判定・台数判定',
+      body:`${rpNeedLabel(p)}が「直行」なら、総合判定は「直行」。\n${maxTxt}` }
+  ];
+  // 判定に使わない項目の説明は載せず、残ったカードに①から順に番号を振る
+  const nums = ['①','②','③','④'];
+  return cards.filter(c => c.use).map((c, i) => ({ title: nums[i] + ' ' + c.title, body: c.body }));
+}
+/* 判定ロジック欄の寸法（先に高さを測って、ページ配置に使う） */
+function rpMeasureLogic(ctx, p){
+  const gap = 24, padX = 22;
+  const nCards = rpLogicCards(p).length;
+  const cardW = (RP_TABLE_W - gap*(nCards - 1)) / nCards;
+  ctx.font = rpFont(400, 25);
+  const cards = rpLogicCards(p).map(c => ({ title:c.title, lines: rpWrap(ctx, c.body, cardW - padX*2 - 36) }));
+  const bodyMax = Math.max(...cards.map(c => c.lines.length));
+  const cardH = 20 + 40 + bodyMax * 38 + 14;
+  const tf = Number(p.timeFactor);
+  const isG = p.provider === 'google';
+  const note = (isG ? '※ 距離・時間は地図サービス（Google Routes API）による自動車の道路経路の計算値です（渋滞予測を含む）。' : '※ 距離・時間は地図サービス（OSRM）による自動車の道路経路の計算値です。') + ((!isG && p.useTime !== false && tf > 1) ? `時間は補正倍率 ${tf.toFixed(1)}倍を掛けた値です。` : '') + '　集合経由＝自宅→集合場所→遠征先　／　直行＝自宅→遠征先';
+  return { cards, gap, cardW, padX, cardH, note, total: 52 + cardH + 14 + 34 };
+}
+function rpDrawLogic(ctx, y, L){
+  ctx.fillStyle = RP_C.accent; ctx.fillRect(RP_M, y + 6, 8, 34);
+  ctx.fillStyle = RP_C.ink; ctx.font = rpFont(700, 30); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText('判定ロジック', RP_M + 22, y + 23);
+  const top = y + 52;
+  L.cards.forEach((c, i) => {
+    const x = RP_M + i * (L.cardW + L.gap);
+    ctx.fillStyle = '#f6f8fb'; rpRound(ctx, x, top, L.cardW, L.cardH, 12); ctx.fill();
+    ctx.strokeStyle = RP_C.line; ctx.lineWidth = 2; rpRound(ctx, x, top, L.cardW, L.cardH, 12); ctx.stroke();
+    ctx.fillStyle = RP_C.accent; ctx.font = rpFont(700, 27); ctx.textBaseline = 'middle';
+    ctx.fillText(c.title, x + L.padX, top + 38);
+    ctx.fillStyle = RP_C.ink; ctx.font = rpFont(400, 25);
+    c.lines.forEach((ln, j) => ctx.fillText(ln, x + L.padX, top + 20 + 40 + j * 38 + 19));
+  });
+  ctx.fillStyle = RP_C.sub; ctx.font = rpFont(400, 21); ctx.textBaseline = 'middle';
+  ctx.fillText(L.note, RP_M, top + L.cardH + 14 + 17);
+}
+
+function rpDrawFooter(ctx, pageNo, pageCount){
+  ctx.fillStyle = RP_C.sub; ctx.font = rpFont(400, 20); ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left';  ctx.fillText('直行直帰 判定ツール', RP_M, RP_H - 44);
+  ctx.textAlign = 'right'; ctx.fillText(`${pageNo} / ${pageCount}`, RP_W - RP_M, RP_H - 44);
+  ctx.textAlign = 'left';
+}
+
+function rpDrawTopHeader(ctx, d, first){
+  const dt = new Date(d.generatedAt);
+  const dtStr = `${dt.getFullYear()}年${dt.getMonth()+1}月${dt.getDate()}日 ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')} 実行`;
+  ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+  ctx.fillStyle = RP_C.accent; ctx.font = rpFont(700, 24);
+  ctx.fillText('直行直帰 判定ツール', RP_M, RP_M + 26);
+  ctx.fillStyle = RP_C.ink; ctx.font = rpFont(800, 64);
+  ctx.fillText(first ? '判定結果一覧表' : '判定結果一覧表（続き）', RP_M, RP_M + 96);
+  ctx.textAlign = 'right'; ctx.fillStyle = RP_C.sub; ctx.font = rpFont(500, 28);
+  ctx.fillText(dtStr, RP_W - RP_M, RP_M + 96);
+  const dP = d.params || {};
+  const mDate = rpFmtMatchDate(dP.matchDate), mOpp = (dP.opponent || '').trim();
+  if(mDate || mOpp){
+    ctx.textAlign = 'right'; ctx.fillStyle = RP_C.ink; ctx.font = rpFont(700, 30);
+    ctx.fillText(rpFit(ctx, [mDate, mOpp ? '対戦相手：' + mOpp : ''].filter(Boolean).join('　'), 1000, 30, 20, 700), RP_W - RP_M, RP_M + 40);
+  }
+  ctx.textAlign = 'left';
+  ctx.fillStyle = RP_C.accent; ctx.fillRect(RP_M, RP_M + 118, RP_TABLE_W, 5);
+}
+
+function rpDrawInfoBoxes(ctx, d, y){
+  const items = d.items, p = d.params;
+  const ok = items.filter(r => r.ok);
+  const go = ok.filter(r => r.overall === '直行').length;
+  const stop = ok.filter(r => r.overall === '集合経由').length;
+  const err = items.length - ok.length;
+  const baseTxt = d.base ? `（集合場所→遠征先 ${d.base.km.toFixed(1)}km ／ 約${Math.round(d.base.min)}分）` : '';
+  const sumTxt = `参加${items.length}名　直行 ${go}名 ／ 集合経由 ${stop}名` + (err ? ` ／ 取得失敗 ${err}名` : '');
+  const boxes = [
+    { w:790, label:'集合場所', val: p.meetAddr || '（名称未設定）' },
+    { w:790, label:'遠征先',   val: p.expAddr  || '（名称未設定）', note: baseTxt },
+    { w:700, label:'判定結果', val: sumTxt }
+  ];
+  const gap = 20;
+  let x = RP_M;
+  boxes.forEach(b => {
+    ctx.fillStyle = '#f6f8fb'; rpRound(ctx, x, y, b.w, 112, 12); ctx.fill();
+    ctx.strokeStyle = RP_C.line; ctx.lineWidth = 2; rpRound(ctx, x, y, b.w, 112, 12); ctx.stroke();
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = RP_C.sub; ctx.font = rpFont(700, 22); ctx.fillText(b.label, x + 22, y + 28);
+    ctx.fillStyle = RP_C.ink;
+    const t = rpFit(ctx, b.val, b.w - 44, 36, 24, 700);
+    ctx.fillText(t, x + 22, y + 62);
+    if(b.note){
+      ctx.fillStyle = RP_C.sub;
+      const n = rpFit(ctx, b.note, b.w - 44, 21, 16, 400);
+      ctx.fillText(n, x + 22, y + 94);
+    }
+    x += b.w + gap;
+  });
+}
+
+function rpDrawTableHeader(ctx, y, p){
+  const col = id => RP_COLS.find(c => c.id === id);
+  const span = (a, b) => ({ x: col(a).x, w: col(b).x + col(b).w - col(a).x });
+  const groups = [['mk','de','距離'], ['mm','te','時間'], ['an','ae','角度']].filter(g => col(g[0]));
+  const cell = (x, yy, w, h, bg, lines, fg1, fg2, s1, s2) => {
+    ctx.fillStyle = bg; ctx.fillRect(x, yy, w, h);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    if(lines.length === 1){
+      ctx.fillStyle = fg1; ctx.font = rpFont(700, s1); ctx.fillText(lines[0], x + w/2, yy + h/2);
+    } else {
+      ctx.fillStyle = fg1; ctx.font = rpFont(700, s1); ctx.fillText(lines[0], x + w/2, yy + h/2 - 13);
+      ctx.fillStyle = fg2; ctx.font = rpFont(500, s2); ctx.fillText(lines[1], x + w/2, yy + h/2 + 15);
+    }
+  };
+  const dark = RP_C.ink, light = '#c9d6e6';
+  // 2段にまたがる見出し
+  [['no',['No.']], ['name',['氏名']],
+   ['ov',['総合判定', rpNeed(p) >= rpEnabled(p) ? (rpEnabled(p) === 1 ? '1項目で直行' : `${rpEnabled(p)}項目すべて直行`) : `${rpNeed(p)}項目以上で直行`]],
+   ['cj',['台数判定', (!p.maxCount || p.maxCount <= 0) ? '上限なし' : `上限${p.maxCount}台`]]
+  ].forEach(([id, lines]) => {
+    const c = col(id);
+    cell(c.x, y, c.w, RP_HEAD_H, dark, lines, '#fff', light, id === 'no' ? 24 : 28, 21);
+  });
+  // グループ見出し
+  groups.forEach(([a, b, label]) => {
+    const s = span(a, b);
+    cell(s.x, y, s.w, RP_HEAD_H1, '#2b3f5e', [label], '#fff', '#fff', 28, 20);
+  });
+  // サブ見出し
+  const sub = {
+    mk:['集合経由','(km)'], ek:['直行','(km)'], dk:['短縮量','(km)'], de:['評価', rpUse(p).dist ? `≧${p.distTh}km` : '対象外'],
+    mm:['集合経由','(分)'], em:['直行','(分)'], dm:['短縮量','(分)'], te:['評価', rpUse(p).time ? `≧${p.timeTh}分` : '対象外'],
+    an:['差','(°)'],        ae:['評価', rpUse(p).angle ? `≧${p.angleTh}°` : '対象外']
+  };
+  Object.keys(sub).forEach(id => {
+    const c = col(id);
+    if(!c) return;
+    cell(c.x, y + RP_HEAD_H1, c.w, RP_HEAD_H2, RP_C.head2, sub[id], dark, RP_C.sub, 24, 20);
+  });
+  // 区切り線
+  ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 2;
+  RP_COLS.forEach(c => {
+    const twoRow = ['no','name','ov','cj'].includes(c.id);
+    ctx.beginPath(); ctx.moveTo(c.x, y + (twoRow ? 0 : RP_HEAD_H1)); ctx.lineTo(c.x, y + RP_HEAD_H); ctx.stroke();
+  });
+  // グループ見出しの境目だけ白線で区切る
+  ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 3;
+  groups.slice(1).forEach(g => { const c = col(g[0]); ctx.beginPath(); ctx.moveTo(c.x, y); ctx.lineTo(c.x, y + RP_HEAD_H1); ctx.stroke(); });
+}
+
+function rpDrawRow(ctx, y, h, r, idx){
+  const col = id => RP_COLS.find(c => c.id === id);
+  const fsz = Math.max(20, Math.min(32, Math.round(h * 0.5)));
+  ctx.fillStyle = idx % 2 ? RP_C.zebra : '#fff';
+  ctx.fillRect(RP_M, y, RP_TABLE_W, h);
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+  const mid = y + h/2 + 1;
+  // No. / 氏名
+  ctx.fillStyle = RP_C.sub; ctx.font = rpFont(500, fsz - 4);
+  ctx.fillText(String(idx + 1), col('no').x + col('no').w/2, mid);
+  ctx.fillStyle = RP_C.ink; ctx.textAlign = 'left';
+  ctx.fillText(rpFit(ctx, r.name, col('name').w - 32, fsz + 2, 18, 700), col('name').x + 16, mid);
+  ctx.textAlign = 'center';
+
+  if(!r.ok){
+    const s = RP_COLS[2].x, e = col('cj').x + col('cj').w;
+    ctx.fillStyle = RP_C.errBg; ctx.fillRect(s + 6, y + 6, e - s - 12, h - 12);
+    ctx.fillStyle = RP_C.errTx; ctx.textAlign = 'left';
+    const msg = '取得失敗：' + (r.error || '');
+    ctx.fillText(rpFit(ctx, msg, e - s - 48, fsz - 2, 18, 700), s + 24, mid);
+    return;
+  }
+  const num = (id, text, color, weight) => {
+    const c = col(id);
+    if(!c) return;
+    ctx.fillStyle = color || RP_C.ink; ctx.font = rpFont(weight || 500, fsz);
+    ctx.fillText(text, c.x + c.w/2, mid);
+  };
+  const evalCell = (id, ev) => {
+    const c = col(id), go = ev === '直行', off = ev === '対象外';
+    if(!c) return;
+    ctx.fillStyle = off ? '#eef1f5' : (go ? RP_C.goBg : RP_C.stopBg);
+    ctx.fillRect(c.x + 1, y + 1, c.w - 2, h - 2);
+    ctx.fillStyle = off ? RP_C.lineStrong : (go ? RP_C.goTx : RP_C.stopTx); ctx.font = rpFont(700, Math.max(18, fsz - 3));
+    ctx.fillText(ev, c.x + c.w/2, mid);
+  };
+  const dcol = ev => ev === '直行' ? RP_C.goTx : (ev === '対象外' ? RP_C.lineStrong : RP_C.stopTx);
+  num('mk', r.meetKm.toFixed(1)); num('ek', r.expKm.toFixed(1));
+  num('dk', r.diffKm.toFixed(1), dcol(r.distEval), 700); evalCell('de', r.distEval);
+  num('mm', String(Math.round(r.meetMin))); num('em', String(Math.round(r.expMin)));
+  num('dm', String(Math.round(r.diffMin)), dcol(r.timeEval), 700); evalCell('te', r.timeEval);
+  num('an', String(Math.round(r.angle)), dcol(r.angleEval), 700); evalCell('ae', r.angleEval);
+  // 総合判定（塗りつぶしのバッジ）
+  const ov = col('ov'), go = r.overall === '直行';
+  const bw = ov.w - 36, bh = Math.min(h - 14, 46);
+  ctx.fillStyle = go ? RP_C.goSolid : '#fff';
+  rpRound(ctx, ov.x + 18, y + (h - bh)/2, bw, bh, bh/2); ctx.fill();
+  if(!go){ ctx.strokeStyle = RP_C.accent; ctx.lineWidth = 3; rpRound(ctx, ov.x + 18, y + (h - bh)/2, bw, bh, bh/2); ctx.stroke(); }
+  ctx.fillStyle = go ? '#fff' : RP_C.stopTx; ctx.font = rpFont(800, Math.max(20, fsz - 2));
+  ctx.fillText(r.overall, ov.x + ov.w/2, mid);
+  // 台数判定
+  const cj = col('cj');
+  if(r.countJudge){
+    const over = r.countJudge.includes('オーバー');
+    ctx.fillStyle = over ? RP_C.errTx : RP_C.goTx; ctx.font = rpFont(700, fsz - 2);
+    ctx.fillText(r.countJudge, cj.x + cj.w/2, mid);
+  } else {
+    ctx.fillStyle = RP_C.lineStrong; ctx.font = rpFont(500, fsz); ctx.fillText('—', cj.x + cj.w/2, mid);
+  }
+}
+
+function rpDrawGrid(ctx, top, bottom){
+  ctx.strokeStyle = RP_C.line; ctx.lineWidth = 2;
+  RP_COLS.forEach(c => { ctx.beginPath(); ctx.moveTo(c.x, top); ctx.lineTo(c.x, bottom); ctx.stroke(); });
+  ctx.beginPath(); ctx.moveTo(RP_M + RP_TABLE_W, top); ctx.lineTo(RP_M + RP_TABLE_W, bottom); ctx.stroke();
+  // 項目グループの境目は少し濃く
+  ctx.strokeStyle = RP_C.lineStrong; ctx.lineWidth = 3;
+  ['mk','mm','an','ov','cj'].forEach(id => {
+    const c = RP_COLS.find(k => k.id === id);
+    if(!c) return;
+    ctx.beginPath(); ctx.moveTo(c.x, top); ctx.lineTo(c.x, bottom); ctx.stroke();
+  });
+  ctx.strokeStyle = RP_C.lineStrong; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(RP_M, bottom); ctx.lineTo(RP_M + RP_TABLE_W, bottom); ctx.stroke();
+}
+
+/* 判定結果 → A4横ページ（canvasの配列） */
+function buildReportCanvases(){
+  const data = state.results;
+  const s = state.settings;
+  const d = {
+    generatedAt: data.generatedAt,
+    items: data.items,
+    base: data.base || null,
+    params: Object.assign({
+      meetAddr: s.meetAddr, expAddr: s.expAddr,
+      distTh: s.distTh, timeTh: s.timeTh, angleTh: s.angleTh,
+      distRatio: s.distRatio, timeRatio: s.timeRatio, timeFactor: s.timeFactor, useDist: s.useDist, useTime: s.useTime, useAngle: s.useAngle, needCount: s.needCount, maxCount: s.maxCount
+    }, data.params || {})
+  };
+  rpSetLayout(d.params);
+  const n = d.items.length;
+  const scratch = document.createElement('canvas').getContext('2d');
+  const L = rpMeasureLogic(scratch, d.params);
+
+  // 行の高さ：1ページに収まるなら詰めて調整、収まらなければ複数ページ
+  const GAP = 34, rowMax = 64, rowMin = 40;
+  let rowH = Math.min(rowMax, Math.floor((RP_H - RP_M - 20 - L.total - GAP - RP_FIRST_ROWS_TOP) / n));
+  const pages = [];   // {first, rows:[...], logic:boolean}
+  if(rowH >= rowMin){
+    pages.push({ first:true, rows:d.items.slice(), logic:true, start:0 });
+  } else {
+    rowH = 56;
+    const cap1 = Math.floor((RP_H - RP_M - 20 - RP_FIRST_ROWS_TOP) / rowH);
+    const cap2 = Math.floor((RP_H - RP_M - 20 - (RP_NEXT_HEAD_Y + RP_HEAD_H)) / rowH);
+    let i = 0;
+    pages.push({ first:true, rows:d.items.slice(0, cap1), start:0 }); i = cap1;
+    while(i < n){ pages.push({ first:false, rows:d.items.slice(i, i + cap2), start:i }); i += cap2; }
+    const last = pages[pages.length - 1];
+    const topRows = last.first ? RP_FIRST_ROWS_TOP : RP_NEXT_HEAD_Y + RP_HEAD_H;
+    if(topRows + last.rows.length * rowH + GAP + L.total <= RP_H - RP_M - 20) last.logic = true;
+    else pages.push({ first:false, rows:[], logic:true, start:n, onlyLogic:true });
+  }
+
+  return pages.map((pg, pi) => {
+    const cv = document.createElement('canvas');
+    cv.width = RP_W; cv.height = RP_H;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, RP_W, RP_H);
+    rpDrawTopHeader(ctx, d, pg.first);
+    let tableY;
+    if(pg.first){
+      rpDrawInfoBoxes(ctx, d, 212);
+      tableY = 346;
+    } else {
+      tableY = RP_NEXT_HEAD_Y;
+    }
+    let y = tableY;
+    if(!pg.onlyLogic){
+      rpDrawTableHeader(ctx, tableY, d.params);
+      y = tableY + RP_HEAD_H;
+      pg.rows.forEach((r, i) => { rpDrawRow(ctx, y + i * rowH, rowH, r, pg.start + i); });
+      const bottom = y + pg.rows.length * rowH;
+      rpDrawGrid(ctx, tableY + RP_HEAD_H, bottom);
+      y = bottom;
+    }
+    if(pg.logic){
+      rpDrawLogic(ctx, pg.onlyLogic ? RP_NEXT_HEAD_Y : y + GAP, L);
+    }
+    rpDrawFooter(ctx, pi + 1, pages.length);
+    return cv;
+  });
+}
+
+/* ---- 出力（PNG / PDF） ---- */
+function rpMatchLabel(){            // 共有時のコメント：日付と遠征先
+  const p = (state.results && state.results.params) || {};
+  const date = rpFmtMatchDate(p.matchDate);
+  const exp = (p.expAddr || '').trim();
+  return [date, exp ? '遠征先：' + exp : ''].filter(Boolean).join(' ');
+}
+function rpFileBase(){
+  const p = (state.results && state.results.params) || {};
+  const safe = v => String(v || '').replace(/[\\/:*?"<>|\s]+/g, '').slice(0, 30);
+  const date = (p.matchDate || '').replace(/-/g, '');
+  const parts = ['判定結果一覧表'];
+  if(date) parts.push(date);
+  if(safe(p.expAddr)) parts.push(safe(p.expAddr));
+  if(parts.length === 1){   // 日付も遠征先もない場合は従来どおり実行日時
+    const dt = new Date(state.results.generatedAt), q = v => String(v).padStart(2, '0');
+    parts.push(`${dt.getFullYear()}${q(dt.getMonth()+1)}${q(dt.getDate())}_${q(dt.getHours())}${q(dt.getMinutes())}`);
+  }
+  return parts.join('_');
+}
+function rpDownload(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+function rpToBlob(cv, type, q){
+  return new Promise((res, rej) => cv.toBlob(b => b ? res(b) : rej(new Error('画像の生成に失敗しました')), type, q));
+}
+/* JPEG画像を貼ったA4横のPDFを自前で組み立てる */
+function rpBuildPdf(jpegs){
+  const enc = new TextEncoder();
+  const chunks = []; let offset = 0; const offsets = {};
+  const push = x => { const b = typeof x === 'string' ? enc.encode(x) : x; chunks.push(b); offset += b.length; };
+  const addObj = (n, parts) => { offsets[n] = offset; push(`${n} 0 obj\n`); parts.forEach(push); push('\nendobj\n'); };
+  push(new Uint8Array([0x25,0x50,0x44,0x46,0x2D,0x31,0x2E,0x34,0x0A,0x25,0xE2,0xE3,0xCF,0xD3,0x0A]));   // %PDF-1.4 + バイナリ印
+  const kids = jpegs.map((_, i) => `${3 + i*3} 0 R`).join(' ');
+  addObj(1, ['<< /Type /Catalog /Pages 2 0 R >>']);
+  addObj(2, [`<< /Type /Pages /Kids [${kids}] /Count ${jpegs.length} >>`]);
+  jpegs.forEach((j, i) => {
+    const pg = 3 + i*3, ct = pg + 1, im = pg + 2;
+    addObj(pg, [`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 842 595] /Resources << /XObject << /Im0 ${im} 0 R >> >> /Contents ${ct} 0 R >>`]);
+    const content = 'q 842 0 0 595 0 0 cm /Im0 Do Q';
+    addObj(ct, [`<< /Length ${content.length} >>\nstream\n${content}\nendstream`]);
+    addObj(im, [`<< /Type /XObject /Subtype /Image /Width ${j.w} /Height ${j.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${j.bytes.length} >>\nstream\n`, j.bytes, '\nendstream']);
+  });
+  const total = 2 + jpegs.length * 3;
+  const xref = offset;
+  push(`xref\n0 ${total + 1}\n0000000000 65535 f \n`);
+  for(let i = 1; i <= total; i++) push(String(offsets[i]).padStart(10, '0') + ' 00000 n \n');
+  push(`trailer\n<< /Size ${total + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
+  return new Blob(chunks, { type:'application/pdf' });
+}
+
+async function exportReport(kind, share){
+  if(!state.results || !state.results.items || !state.results.items.length){
+    toast('先に判定を実行してください');
+    return;
+  }
+  const btns = document.querySelectorAll('#export-row .btn');
+  btns.forEach(b => b.disabled = true);
+  try{
+    toast(kind === 'pdf' ? 'PDFを作成中...' : '画像を作成中...');
+    await new Promise(r => setTimeout(r, 30));   // 表示を更新してから重い処理へ
+    const canvases = buildReportCanvases();
+    const base = rpFileBase();
+    if(share){
+      // 共有（LINE・メールなど）: 端末の共有メニューを開く
+      let files = [];
+      if(kind === 'pdf'){
+        const jpegs = [];
+        for(const cv of canvases){
+          const blob = await rpToBlob(cv, 'image/jpeg', 0.92);
+          jpegs.push({ bytes:new Uint8Array(await blob.arrayBuffer()), w:cv.width, h:cv.height });
+        }
+        files = [ new File([rpBuildPdf(jpegs)], base + '.pdf', { type:'application/pdf' }) ];
+      } else {
+        for(let i = 0; i < canvases.length; i++){
+          const blob = await rpToBlob(canvases[i], 'image/png');
+          files.push(new File([blob], canvases.length > 1 ? `${base}_${i+1}.png` : base + '.png', { type:'image/png' }));
+        }
+      }
+      if(!(navigator.canShare && navigator.canShare({ files }))){
+        toast('この端末・ブラウザでは共有できません。「保存」ボタンで保存してから送ってください');
+        return;
+      }
+      try{
+        const shareTitle = rpMatchLabel() || '判定結果一覧表';
+        await navigator.share({ files, title: shareTitle, text: shareTitle });
+      }catch(e){
+        if(e && e.name === 'AbortError') return;   // 共有画面を閉じただけ
+        throw e;
+      }
+      rpMarkExported();
+      return;
+    }
+    if(kind === 'pdf'){
+      const jpegs = [];
+      for(const cv of canvases){
+        const blob = await rpToBlob(cv, 'image/jpeg', 0.92);
+        jpegs.push({ bytes:new Uint8Array(await blob.arrayBuffer()), w:cv.width, h:cv.height });
+      }
+      rpDownload(rpBuildPdf(jpegs), base + '.pdf');
+    } else {
+      for(let i = 0; i < canvases.length; i++){
+        const blob = await rpToBlob(canvases[i], 'image/png');
+        rpDownload(blob, canvases.length > 1 ? `${base}_${i+1}.png` : base + '.png');
+        if(i < canvases.length - 1) await new Promise(r => setTimeout(r, 400));
+      }
+    }
+    rpMarkExported();
+    toast(kind === 'pdf' ? 'PDFを保存しました' : '画像を保存しました');
+  }catch(err){
+    toast('出力に失敗しました: ' + err.message);
+  }finally{
+    btns.forEach(b => b.disabled = false);
+  }
+}
+/* 「保存」「共有」を押したら形式（画像／PDF）を選ぶ */
+let rpMode = 'save';
+function rpOpenFormatPicker(mode){
+  if(!state.results || !state.results.items || !state.results.items.length){
+    toast('先に判定を実行してください');
+    return;
+  }
+  rpMode = mode;
+  document.getElementById('export-modal-title').textContent = mode === 'share' ? '共有する形式' : '保存する形式';
+  document.getElementById('export-modal-msg').textContent = mode === 'share'
+    ? '選んだ形式で共有メニューを開きます（LINE・メールなど）'
+    : '選んだ形式で端末に保存します';
+  document.getElementById('export-modal-overlay').classList.add('show');
+}
+function rpCloseFormatPicker(){
+  document.getElementById('export-modal-overlay').classList.remove('show');
+}
+function rpPickFormat(kind){
+  const share = rpMode === 'share';
+  rpCloseFormatPicker();
+  exportReport(kind, share);
+}
+/* プレビュー：保存・共有する画像（PNG）と同じ内容を、この画面の中で表示する */
+let pvUrls = [], pvZoom = 100;
+function pvApplyZoom(){
+  document.querySelectorAll('#pv-body img').forEach(im => { im.style.width = pvZoom + '%'; });
+  document.getElementById('pv-zoom-label').textContent = pvZoom + '%';
+}
+function pvClose(){
+  document.getElementById('pv-overlay').classList.remove('show');
+  document.getElementById('pv-body').innerHTML = '';
+  pvUrls.forEach(u => URL.revokeObjectURL(u)); pvUrls = [];
+}
+async function pvOpen(){
+  if(!state.results || !state.results.items || !state.results.items.length){
+    toast('先に判定を実行してください');
+    return;
+  }
+  const body = document.getElementById('pv-body');
+  body.innerHTML = '<div class="pv-msg">プレビューを作成中...</div>';
+  document.getElementById('pv-sub').textContent = '';
+  document.getElementById('pv-overlay').classList.add('show');
+  try{
+    await new Promise(r => setTimeout(r, 30));
+    const canvases = buildReportCanvases();
+    pvUrls.forEach(u => URL.revokeObjectURL(u)); pvUrls = [];
+    const urls = [];
+    for(const cv of canvases){ urls.push(URL.createObjectURL(await rpToBlob(cv, 'image/png'))); }
+    pvUrls = urls;
+    pvZoom = 100;
+    body.innerHTML = urls.map((u, i) => `<img src="${u}" alt="一覧表 ${i+1}ページ">`).join('');
+    document.getElementById('pv-sub').textContent = `${canvases.length}ページ`;
+    pvApplyZoom();
+  }catch(err){
+    body.innerHTML = '<div class="pv-msg">プレビューの作成に失敗しました: ' + String(err.message || err).replace(/</g, '&lt;') + '</div>';
+  }
+}
+document.getElementById('btn-preview').addEventListener('click', pvOpen);
+document.getElementById('pv-close').addEventListener('click', pvClose);
+document.getElementById('pv-zoom-in').addEventListener('click', () => { pvZoom = Math.min(400, pvZoom + 50); pvApplyZoom(); });
+document.getElementById('pv-zoom-out').addEventListener('click', () => { pvZoom = Math.max(100, pvZoom - 50); pvApplyZoom(); });
+document.getElementById('pv-save').addEventListener('click', () => rpOpenFormatPicker('save'));
+document.getElementById('pv-share').addEventListener('click', () => rpOpenFormatPicker('share'));
+document.getElementById('btn-save').addEventListener('click', () => rpOpenFormatPicker('save'));
+document.getElementById('btn-share').addEventListener('click', () => rpOpenFormatPicker('share'));
+document.getElementById('export-pick-png').addEventListener('click', () => rpPickFormat('png'));
+document.getElementById('export-pick-pdf').addEventListener('click', () => rpPickFormat('pdf'));
+document.getElementById('export-modal-cancel').addEventListener('click', rpCloseFormatPicker);
+document.getElementById('export-modal-overlay').addEventListener('click', (e) => { if(e.target.id === 'export-modal-overlay') rpCloseFormatPicker(); });
+
+/* 登録ボタン：前回の判定結果をクリアして判定画面へ移動 */
+document.getElementById('btn-register').addEventListener('click', ()=>{
+  const saveCb = document.getElementById('pm-expSave');
+  if(saveCb.checked){
+    const s = state.settings;
+    const name = (s.expAddr || '').trim();
+    if(!name || !isNum(s.expLat) || !isNum(s.expLng)){
+      toast('履歴に保存するには、遠征先の名前と緯度・経度を入力してください');
+      return;
+    }
+    pushUndo();
+    const list = state.history.exp;
+    const ex = list.find(h => h.label === name);
+    if(ex){
+      ex.lat = s.expLat; ex.lng = s.expLng; ex.savedAt = Date.now();
+      s.expHistId = ex.id;
+    } else {
+      const id = uid();
+      list.unshift({ id, label:name, lat:s.expLat, lng:s.expLng, savedAt:Date.now() });
+      s.expHistId = id;
+    }
+    s.expAddr = name;
+    saveState();
+    renderHistorySelect('exp');
+    saveCb.checked = false;
+  }
+  state.results = null;
+  saveState();
+  setStatus('', false);
+  renderResults();
+  setMemberPanel(false);
+  switchTab('results');
+  window.scrollTo(0, 0);
+});
+/* 前回の登録内容（集合場所・遠征先・参加者は全員参加にリセット・判定結果）をクリア */
+function clearSelection(){
+  pushUndo();
+  const s = state.settings;
+  s.meetAddr = ''; s.meetLat = null; s.meetLng = null; s.meetHistId = null;
+  s.expAddr = '';  s.expLat = null;  s.expLng = null;  s.expHistId = null;
+  s.matchDate = ''; s.opponent = '';
+  state.members.forEach(m => { if(!m.deleted) m.active = true; });
+  state.results = null;
+  saveState();
+  document.getElementById('pm-expSave').checked = false;
+  setMemberPanel(false);
+  setStatus('', false);
+  fillSettingsForm();
+  renderMembers();
+  renderResults();
+  toast('前回の登録内容をクリアしました');
+}
+/* 戻るボタン：場所・参加者画面へ */
+document.getElementById('btn-back').addEventListener('click', ()=>{
+  switchTab('place-members');
+  window.scrollTo(0, 0);
+});
+
+</script>
+</body>
+</html>
