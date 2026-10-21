@@ -5,13 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f3f5f9">
 <title>直行直帰 判定ツール</title>
-<link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="直行直帰">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -790,7 +783,7 @@
     <details class="card fold" id="settings-member-add">
       <summary><h2>参加者の追加</h2></summary>
       <div class="fold-body">
-      <p class="hint">新しい参加者を登録します。判定には自宅の緯度・経度が必要です。</p>
+      <p class="hint">新しい参加者を登録します。判定には緯度・経度が必要です。自宅が特定されないよう、町名レベルの住所とその中心点の緯度・経度を入力することをおすすめします。</p>
       <div id="member-draft-list"></div>
       <button type="button" class="btn primary" id="btn-member-draft-submit" style="margin-top:12px;">参加者を登録する</button>
       </div>
@@ -809,7 +802,7 @@
         <svg viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
         初期設定に戻す
       </button>
-      <p class="hint" style="margin-top:10px;">機種変更などに備えて、たまにバックアップの書き出しをおすすめします。バックアップはExcel（.xlsx）ファイルで書き出されます。書き出されるのは「集合場所」と「遠征先」の履歴のみで、参加者の情報は含まれません。Excelで中身を確認・編集して読み込み直すこともできます。データはこの端末のブラウザ内にのみ保存されます。うっかり変更してしまった場合は、右下の「元に戻す」ボタンで直前の状態に戻せます。</p>
+      <p class="hint" style="margin-top:10px;">機種変更などに備えて、たまにバックアップの書き出しをおすすめします。バックアップはExcel（.xlsx）ファイルで書き出されます。書き出されるのは「集合場所」「遠征先」の履歴と「参加者」（氏名・住所・緯度経度・参加の有無）です。参加者の住所・緯度経度は、自宅が特定されないよう町名レベルの住所とその中心点を使うことをおすすめします。読み込むと、ファイルに含まれる集合場所・遠征先・参加者で現在の内容が置き換わります。Excelで中身を確認・編集して読み込み直すこともできます。データはこの端末のブラウザ内にのみ保存されます。うっかり変更してしまった場合は、右下の「元に戻す」ボタンで直前の状態に戻せます。</p>
       </div>
     </details>
   </section>
@@ -864,7 +857,7 @@
       </details>
       <details class="howto">
         <summary>データはどこに保存される？</summary>
-        <div class="body">すべてこの端末のブラウザ内（ローカル）に保存されます。サーバーには送信されません。距離・時間の計算時のみ、緯度経度が地図サービス（OSRM、取得元をGoogleにした場合はGoogle）に送信されます。Google APIキーはこの端末のブラウザ内にだけ保存され、バックアップや判定結果には含まれません。機種変更時は「設定」タブの「バックアップ書き出し」で集合場所・遠征先の履歴を引き継げます（参加者の情報は引き継がれません）。</div>
+        <div class="body">すべてこの端末のブラウザ内（ローカル）に保存されます。サーバーには送信されません。距離・時間の計算時のみ、緯度経度が地図サービス（OSRM、取得元をGoogleにした場合はGoogle）に送信されます。Google APIキーはこの端末のブラウザ内にだけ保存され、バックアップや判定結果には含まれません。機種変更時は「設定」タブの「バックアップ書き出し」で集合場所・遠征先の履歴と参加者を引き継げます。</div>
       </details>
       <details class="howto">
         <summary>ホーム画面に追加する（アプリのように使う）</summary>
@@ -1038,22 +1031,40 @@ const DEFAULT_DATA = {
     maxCount: 2
   },
   members: [
-    { name:"内田", lat:35.176774032666003, lng:136.985612309261, active:true },
-    { name:"加田", lat:35.281937485050001, lng:137.000433489893, active:true },
-    { name:"菊岡", lat:35.195103867062699, lng:137.033012036603, active:true },
-    { name:"菊地", lat:35.208086655078901, lng:136.988672649015, active:true },
-    { name:"杉村", lat:35.0554789139577,   lng:136.94543826270501, active:true },
-    { name:"辻",   lat:35.1140419332975,   lng:137.02026907313299, active:true },
-    { name:"仲野", lat:35.2753657999979,   lng:136.979242483267, active:true },
-    { name:"中山", lat:35.1554420378543,   lng:137.187760658526, active:true },
-    { name:"西脇", lat:35.214437663784402, lng:137.023398947543, active:true },
-    { name:"古田", lat:35.3352535990199,   lng:137.147166527607, active:true },
-    { name:"本多", lat:35.2285514697219,   lng:137.05293841498701, active:true },
-    { name:"前川", lat:35.229068209684101, lng:137.053967003465, active:true },
-    { name:"森",   lat:35.223476362069803, lng:137.05195022369099, active:true },
-    { name:"鷲尾", lat:35.315467540533497, lng:136.947005600051, active:true }
+    { name:"内田", addr:"愛知県名古屋市名東区八前", lat:35.1785157069938, lng:136.988399981427, active:true },
+    { name:"加田", addr:"愛知県春日井市東山町", lat:35.2785226246476, lng:136.999458393518, active:true },
+    { name:"菊岡", addr:"愛知県尾張旭市南本地ヶ原町", lat:35.1938673940015, lng:137.031938589753, active:true },
+    { name:"菊地", addr:"愛知県名古屋市守山区喜多山", lat:35.2068946257205, lng:136.984974075659, active:true },
+    { name:"杉村", addr:"愛知県名古屋市緑区南大高", lat:35.0531278953796, lng:136.947264749348, active:true },
+    { name:"辻", addr:"愛知県日進市赤池南", lat:35.1184039095169, lng:137.022482992615, active:true },
+    { name:"仲野", addr:"愛知県春日井市西山町", lat:35.2731312548718, lng:136.980304135106, active:true },
+    { name:"中山", addr:"愛知県豊田市西中山町崩ヶ崎", lat:35.1574386773641, lng:137.183965259242, active:true },
+    { name:"西脇", addr:"愛知県尾張旭市城前町", lat:35.2105449479091, lng:137.019239701031, active:true },
+    { name:"古田", addr:"岐阜県多治見市生田町", lat:35.3399234965246, lng:137.135822526791, active:true },
+    { name:"本多", addr:"愛知県尾張旭市柏井町弥栄", lat:35.2271014966677, lng:137.050739016805, active:true },
+    { name:"前川", addr:"愛知県尾張旭市柏井町弥栄", lat:35.2271014966677, lng:137.050739016805, active:true },
+    { name:"森", addr:"愛知県尾張旭市東大久手町", lat:35.2243983017414, lng:137.052281657444, active:true },
+    { name:"鷲尾", addr:"愛知県小牧市久保一色", lat:35.3153721823555, lng:136.940424702503, active:true }
   ],
   results: null
+};
+
+/* 参加者の旧初期座標（自宅の座標）。初期値のままの参加者だけを、配慮した住所の中心点へ移行するために使う */
+const OLD_MEMBER_COORDS = {
+  "内田": [35.176774032666, 136.985612309261],
+  "加田": [35.28193748505, 137.000433489893],
+  "菊岡": [35.1951038670627, 137.033012036603],
+  "杉村": [35.0554789139577, 136.945438262705],
+  "辻": [35.1140419332975, 137.020269073133],
+  "仲野": [35.2753657999979, 136.979242483267],
+  "中山": [35.1554420378543, 137.187760658526],
+  "西脇": [35.2144376637844, 137.023398947543],
+  "古田": [35.3352535990199, 137.147166527607],
+  "本多": [35.2285514697219, 137.052938414987],
+  "前川": [35.2290682096841, 137.053967003465],
+  "森": [35.2234763620698, 137.051950223691],
+  "菊地": [35.208086655078901, 136.988672649015],
+  "鷲尾": [35.3154675405335, 136.947005600051]
 };
 
 /* 過去の遠征実績（NC02・NC03、参考データ）を初期履歴として投入するための元データ。
@@ -1140,6 +1151,20 @@ function loadState(){
   if(data.historySeeded === true && !data.historySeededVersion) data.historySeededVersion = 1;
   if(!data.historySeededVersion) data.historySeededVersion = 0;
   let seedChanged = false;
+  // 参加者の緯度経度を「プライバシーに配慮した住所」の中心点へ置き換え（初期値のままの参加者のみ。編集済みの人は変更しない）
+  {
+    DEFAULT_DATA.members.forEach(dm=>{
+      const o = OLD_MEMBER_COORDS[dm.name];
+      if(!o) return;
+      data.members.forEach(m=>{
+        if(m.name === dm.name && typeof m.lat === 'number' && typeof m.lng === 'number'
+           && Math.abs(m.lat - o[0]) < 1e-6 && Math.abs(m.lng - o[1]) < 1e-6){
+          m.lat = dm.lat; m.lng = dm.lng; m.addr = dm.addr;
+          seedChanged = true;
+        }
+      });
+    });
+  }
   if(data.historySeededVersion < 1){
     const existingExpLabels = new Set(data.history.exp.map(h=>h.label));
     const seedExp = SEED_HISTORY_EXP_RAW.filter(e=>!existingExpLabels.has(e.label)).map(toHistEntry);
@@ -1890,37 +1915,54 @@ const bkNum = v => { if(v === null || v === undefined || v === '') return null; 
 const bkStr = v => (v === null || v === undefined) ? '' : String(v);
 const bkTime = v => { if(isNum(v)) return v; const t = new Date(bkStr(v).replace(' ','T')).getTime(); return isNaN(t) ? null : t; };
 
-/* バックアップに含めるのは「集合場所」「遠征先」の履歴のみ（参加者の個人情報・設定は含めない） */
+/* バックアップに含めるのは「集合場所」「遠征先」の履歴と「参加者」（判定の設定は含めない） */
 function buildBackupXlsx(){
   const histRows = type => {
     const rows = [['ID','名称','緯度','経度','備考（住所・区分）','日付','登録日時']];
     state.history[type].forEach(h=>rows.push([h.id, h.label || '', isNum(h.lat) ? h.lat : '', isNum(h.lng) ? h.lng : '', h.note || '', h.date || '', bkFmtDT(h.savedAt)]));
     return rows;
   };
+  const memberRows = () => {
+    const rows = [['ID','氏名','住所（配慮した住所）','緯度','経度','参加','削除済み']];
+    state.members.forEach(m=>rows.push([m.id || '', m.name || '', m.addr || '', isNum(m.lat) ? m.lat : '', isNum(m.lng) ? m.lng : '', m.active === false ? 'OFF' : 'ON', m.deleted ? 'はい' : '']));
+    return rows;
+  };
   return XB.buildXlsx([
     { name:'集合場所', rows:histRows('meet'), widths:[12,36,16,16,38,12,20] },
     { name:'遠征先', rows:histRows('exp'), widths:[12,36,16,16,38,12,20] },
+    { name:'参加者', rows:memberRows(), widths:[12,16,36,16,16,8,10] },
   ]);
 }
 
-/* 読み込み：集合場所・遠征先の履歴だけを取り出す（ファイルに参加者が入っていても読み込まない） */
+/* 読み込み：集合場所・遠征先の履歴と参加者を取り出す（ファイルに無い項目は変更しない） */
 async function parseBackupFile(buf){
   const u8 = new Uint8Array(buf);
   const norm = (list) => (Array.isArray(list) ? list : []).filter(h=>h && bkStr(h.label).trim() !== '').map(h=>({
     id: bkStr(h.id).trim() || uid(), label: bkStr(h.label).trim(), lat: bkNum(h.lat), lng: bkNum(h.lng),
     note: bkStr(h.note), date: bkStr(h.date), savedAt: bkTime(h.savedAt) || Date.now()
   }));
+  const isOff = v => { const s = bkStr(v).trim().toLowerCase(); return s === 'off' || s === 'false' || s === '×' || s === '0' || s === '不参加' || s === 'いいえ'; };
+  const isYes = v => { const s = bkStr(v).trim().toLowerCase(); return s === 'はい' || s === 'true' || s === '1' || s === 'yes' || s === '○' || s === '削除' || s === '削除済み'; };
+  const normMembers = (list) => {
+    const arr = (Array.isArray(list) ? list : []).filter(m=>m && bkStr(m.name).trim() !== '').map(m=>({
+      id: bkStr(m.id).trim() || uid(), name: bkStr(m.name).trim(), addr: bkStr(m.addr).trim(),
+      lat: bkNum(m.lat), lng: bkNum(m.lng), active: !isOff(m.active), deleted: isYes(m.deleted)
+    }));
+    return arr.length ? arr : null;     // 空のときは現在の参加者を消さない
+  };
   if(!(u8[0] === 0x50 && u8[1] === 0x4B)){            // Excelでなければ、従来のJSONバックアップとして読む
     const data = JSON.parse(new TextDecoder('utf-8').decode(u8));
-    if(!data.history || (!Array.isArray(data.history.meet) && !Array.isArray(data.history.exp))) throw new Error('集合場所・遠征先のデータが見つかりません');
-    return { meet: Array.isArray(data.history.meet) ? norm(data.history.meet) : null, exp: Array.isArray(data.history.exp) ? norm(data.history.exp) : null };
+    const h = data.history || {};
+    if(!Array.isArray(h.meet) && !Array.isArray(h.exp) && !Array.isArray(data.members)) throw new Error('集合場所・遠征先・参加者のデータが見つかりません');
+    return { meet: Array.isArray(h.meet) ? norm(h.meet) : null, exp: Array.isArray(h.exp) ? norm(h.exp) : null, members: Array.isArray(data.members) ? normMembers(data.members) : null };
   }
   const book = await XB.parseXlsx(buf);
   const sheetOf = (...names) => { for(const n of names){ if(book[n]) return book[n]; } return null; };
-  const meetRows = sheetOf('集合場所', '集合場所履歴'), expRows = sheetOf('遠征先', '遠征先履歴');
-  if(!meetRows && !expRows) throw new Error('このアプリで書き出したExcelファイルを選んでください');
+  const meetRows = sheetOf('集合場所', '集合場所履歴'), expRows = sheetOf('遠征先', '遠征先履歴'), memRows = sheetOf('参加者');
+  if(!meetRows && !expRows && !memRows) throw new Error('このアプリで書き出したExcelファイルを選んでください');
   const fromRows = rows => norm(rows.slice(1).map(r=>({ id:r[0], label:r[1], lat:r[2], lng:r[3], note:r[4], date:r[5], savedAt:r[6] })));
-  return { meet: meetRows ? fromRows(meetRows) : null, exp: expRows ? fromRows(expRows) : null };
+  const memFromRows = rows => normMembers(rows.slice(1).map(r=>({ id:r[0], name:r[1], addr:r[2], lat:r[3], lng:r[4], active:r[5], deleted:r[6] })));
+  return { meet: meetRows ? fromRows(meetRows) : null, exp: expRows ? fromRows(expRows) : null, members: memRows ? memFromRows(memRows) : null };
 }
 
 document.getElementById('btn-export').addEventListener('click', ()=>{
@@ -1934,7 +1976,7 @@ document.getElementById('btn-export').addEventListener('click', ()=>{
     a.download = `直行直帰判定ツール_バックアップ_${ts}.xlsx`;
     a.click();
     setTimeout(()=>URL.revokeObjectURL(url), 4000);
-    toast('集合場所・遠征先のバックアップ（Excel）を書き出しました');
+    toast('集合場所・遠征先・参加者のバックアップ（Excel）を書き出しました');
   }catch(err){
     toast('書き出しに失敗しました: ' + err.message);
   }
@@ -1958,22 +2000,25 @@ document.getElementById('file-import').addEventListener('change', (e)=>{
     const parts = [];
     if(nMeet !== null) parts.push(`集合場所 ${nMeet}件`);
     if(nExp !== null) parts.push(`遠征先 ${nExp}件`);
+    if(data.members) parts.push(`参加者 ${data.members.length}人`);
     showConfirm({
-      title:'集合場所・遠征先を読み込みますか？',
-      message:`現在の履歴を、選んだファイルの内容（${parts.join('、')}）で置き換えます。参加者・判定の設定は変わりません。よろしいですか？\n（この操作も「元に戻す」で取り消せます）`,
+      title:'集合場所・遠征先・参加者を読み込みますか？',
+      message:`現在の履歴と参加者を、選んだファイルの内容（${parts.join('、')}）で置き換えます。判定の設定は変わりません。ファイルに含まれない項目は変更しません。よろしいですか？\n（この操作も「元に戻す」で取り消せます）`,
       okLabel:'読み込む',
       danger:true,
       onOk: ()=>{
         pushUndo();
         if(data.meet) state.history.meet = data.meet;
         if(data.exp) state.history.exp = data.exp;
+        if(data.members) state.members = data.members;
         ['meet','exp'].forEach(t=>{
           const id = state.settings[t + 'HistId'];
           if(id && !state.history[t].some(h=>h.id === id)) state.settings[t + 'HistId'] = null;
         });
         saveState();
         fillSettingsForm();
-        toast('集合場所・遠征先を読み込みました');
+        if(data.members) renderMembers();
+        toast('集合場所・遠征先・参加者を読み込みました');
       }
     });
   };
